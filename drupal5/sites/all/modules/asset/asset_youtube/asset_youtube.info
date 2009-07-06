@@ -1,0 +1,9 @@
+name = Asset YouTube
+description = Use youtube videos as drupal assets.
+dependencies = asset
+package = Asset
+; Information added by drupal.org packaging script on 2008-09-09
+version = "5.x-1.0-rc2"
+project = "asset"
+datestamp = "1220995502"
+

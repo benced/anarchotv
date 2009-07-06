@@ -1,0 +1,156 @@
+<?php
+
+// $Id: flvmediaplayer.install,v 1.1.2.6.2.7 2008/12/19 18:06:22 arthuregg Exp $
+
+/**
+ * implementation of hook_uninstall()
+ */
+function flvmediaplayer_uninstall() {
+  db_query('DROP TABLE {flvmediaplayer}');
+  db_query('DROP TABLE {flvmediaplayer_profiles}');
+  db_query('DROP TABLE {cache_flvmediaplayer}');
+  variable_del('flvmediaplayer_%');
+  variable_del('flvmp_%');
+}
+
+
+/**
+ * implementation of hook_install
+ */
+function flvmediaplayer_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      db_query("CREATE TABLE {flvmediaplayer_node} (
+        `nid` int(11) DEFAULT NULL,
+        `config` blob DEFAULT NULL ); ");
+
+      db_query("CREATE TABLE IF NOT EXISTS `cache_flvmediaplayer` (
+		    `cid` varchar(255) NOT NULL default '',
+		    `data` longblob,
+		    `expire` int(11) NOT NULL default '0',
+		    `created` int(11) NOT NULL default '0',
+		    `headers` text,
+		    PRIMARY KEY  (`cid`),
+		    KEY `expire` (`expire`)
+		    ) ENGINE=MyISAM DEFAULT CHARSET=utf8;");
+
+       db_query("CREATE TABLE {flvmediaplayer_profiles} (
+        `pid` int(11) DEFAULT NULL,
+        `type` varchar(255) NOT NULL default '',
+        `name`  varchar(255) NOT NULL default '',
+        `config` blob DEFAULT NULL ) ENGINE=MyISAM DEFAULT CHARSET=utf8;; ");
+    break;
+  }
+}
+
+/**
+ * run the install if it hasn't been installed yet
+ */
+function flvmediaplayer_update_1() {
+  flvmediaplayer_install();
+}
+
+/**
+ * add the cache table
+ */
+function flvmediaplayer_update_2() {
+  $ret[] = update_sql("CREATE TABLE IF NOT EXISTS `cache_flvmediaplayer` (
+    `cid` varchar(255) NOT NULL default '',
+    `data` longblob,
+    `expire` int(11) NOT NULL default '0',
+    `created` int(11) NOT NULL default '0',
+    `headers` text,
+    PRIMARY KEY  (`cid`),
+    KEY `expire` (`expire`)
+    ) ENGINE=MyISAM DEFAULT CHARSET=utf8;");
+  return $ret;
+}
+
+
+/**
+ * creates the profile table if you don't already have one
+ * updates the existing node configs to have the override setting
+ */
+function flvmediaplayer_update_3() {
+  $ret[] = update_sql("CREATE TABLE IF NOT EXISTS {flvmediaplayer_profiles} (
+    `pid` int(11) DEFAULT NULL,
+    `type` varchar(255) NOT NULL default '',
+    `name`  varchar(255) NOT NULL default '',
+    `config` blob DEFAULT NULL ) ENGINE=MyISAM DEFAULT CHARSET=utf8; "
+   );
+	$results = db_query('SELECT * FROM {flvmediaplayer}');
+  while($result = db_fetch_array($results)){
+    $result['config'] = array_merge(unserialize($result['config']), array('override' => true));
+    $ret[] = update_sql("UPDATE {flvmediaplayer} SET config = '". serialize($result['config']) . "' WHERE nid = ". $result['nid']);
+  }
+
+  // upgrade the previous versions content type settings
+  $enabled_types = variable_get('flvmediaplayer_types', false);
+  if ($enabled_types) {
+    foreach ($enabled_types as $type) {
+      $config = array();
+      $config['size'] = variable_get('flvmp_'. $type .'_size', '320x240');
+      $config['logo'] = variable_get('flvmp_'. $type .'_logo', false);
+      $config['strech'] =  variable_get('flvmp_'. $type .'_stretch', null);
+      $config['fullscreen'] = variable_get('flvmp_'. $type .'_fullscreen', false);
+      $config['back_color'] = variable_get('flvmp_'. $type .'_back_color', '');
+      $config['front_color'] = variable_get('flvmp_'. $type .'_front_color', '');
+      $config['light_color'] = variable_get('flvmp_'. $type .'_light_color', '');
+      $config['screen_color'] = variable_get('flvmp_'. $type .'_screen_color', '');
+      $config['flashvars'] = variable_get('flvmp_'. $type .'_flashvars', '');
+      $config['shuffle'] = variable_get('flvmp_'. $type .'_shuffle', false);
+      $config['embed'] = variable_get('flvmp_'. $type .'_embed', false);
+      $config['file_use'] = variable_get('flvmp_'. $type .'_file_use', '');
+      $config['no_media'] = variable_get('flvmp_'. $type .'_no_media', false);
+      $config['display'] = variable_get('flvmp_'. $type .'_display', true);
+      $config['tracker'] = variable_get('flvmp_'. $type .'_tracker', false);
+
+      $config = serialize($config);
+      $pid = db_next_id('{flvmediaplayer_profiles}');
+
+      $name = $type .'_profile';
+      db_query("INSERT INTO {flvmediaplayer_profiles} (pid, type, name, config) VALUES (%d, 'profile', '%s', '%s' )", $pid, $name, $config);
+
+      // now set the default for this content type
+      variable_set('flvmp_'. $type .'_profile', $name);
+    }
+  }
+	return $ret;
+}
+
+/**
+ * Rebuld menus after fix to hook_menu() implementation.
+ */
+function flvmediaplayer_update_4() {
+  menu_rebuild();
+  return array();
+}
+
+/**
+ * Truncate the cache table to prevent issues with the update
+ * also update the player name to .inc
+ */
+function flvmediaplayer_update_5400() {
+  cache_clear_all('*', 'cache_flvmediaplayer', true);
+  drupal_set_message(t('Cleared the FLV Media Player cache'));
+  $oldplayer = variable_get('flvmediaplayer_player', 'jw_player_4.x.player') ;
+  $pattern = '/.player$/';
+  variable_set('flvmediaplayer_player', preg_replace($pattern, '.inc', $oldplayer));
+  drupal_set_message(t('Updated your player path to the new format'));
+  return array();
+}
+
+
+/**
+ * Rebuld menus after fix to hook_menu() implementation.
+ */
+function flvmediaplayer_update_5401() {
+  $ret = array();
+  // update the table names to harmonize with D6
+  $ret[] = update_sql('RENAME TABLE {flvmediaplayer}  TO {flvmediaplayer_node}');
+  // rebuild the menu options
+  menu_rebuild();
+  return $ret;
+}
+

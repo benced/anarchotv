@@ -1,0 +1,221 @@
+<?php
+// $Id: bt_tracker.module,v 1.5.2.12 2007/09/22 05:10:21 bradfordcp Exp $
+
+/**
+ * @file
+ * The module portion of the tracker, contains
+ * the interface elements for editing settings
+ * 
+ * Additional tracker notes
+ */
+
+/**
+ * Implementation of hook_menu
+ *
+ * @return An array of menu items
+ */
+function bt_tracker_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/bt_tracker',
+      'title' => t('BitTorrent Tracker Settings'),
+      'description' => t('Change the global settings for the BitTorrent Tracker module'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('bt_tracker_admin_settings'),
+      'access' => user_access('administer site configuration')
+    );
+  }
+  return $items;
+}
+
+/**
+ * Define BitTorrent Tracker settings
+ * 
+ * @return The administrative form
+ */
+function bt_tracker_admin_settings() {
+  $form['general_bt_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General Tracker Settings'),
+    '#description' => t('These are general settings for the bittorrent tracker. Mostly nameing your tracker and setting the privacy scope.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['general_bt_settings']['bt_tracker_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Tracker Name'),
+    '#default_value' => variable_get('bt_tracker_name', variable_get('site_name', 'BitTorrent') .' '. t('Tracker')),
+    '#description' => t('This is the name of the BitTorrent Tracker.'),
+  );
+  $form['general_bt_settings']['bt_tracker_scope'] = array(
+    '#type' => 'radios',
+    '#title' => t('Tracker Scope'),
+    '#options' => array(
+      t('Public'),
+      t('Mixed'),
+      t('Private'),
+    ),
+    '#default_value' => variable_get('bt_tracker_scope', 0),
+    '#description' => t('Sets the scope of the tracker. Public allows for the best performance and complete anonymity, but at the cost of statistics. Mixed tracks statistics of registered users and still allows anonymous access. Private restricts access to registered users and has the most fine grained control.'),
+  );
+  $form['general_bt_settings']['bt_tracker_scrape_scope'] = array(
+    '#type' => 'radios',
+    '#title' => t('Scrape Source'),
+    '#options' => array(
+      t('Cached Statistics'),
+      t('Live Statistics'),
+    ),
+    '#default_value' => variable_get('bt_tracker_scrape_scope', 0),
+    '#description' => t('Determines where the scrape convention pulls its data from. Cached values are returned faster with little database load, but they are updated when cron runs. Live counts the records in the active users table allowing precise values, this may place a higher load on your database.'),
+  );
+  
+  $form['intervals'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Tracker Intervals'),
+    '#description' => t('These settings control how often certain events occur within the tracker. This includes the announce and scrape intervals for the client as well as how often the tracker should auto-prune the active users information. Please note that how often the code is executed depends on when your cron jobs run'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['intervals']['bt_tracker_announce_interval'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Announce Interval'),
+    '#default_value' => variable_get('bt_tracker_announce_interval', 1800),
+    '#description' => t('This is how often the torrent clients perform announce requests to the tracker.'),
+  );
+  $form['intervals']['bt_tracker_scrape_interval'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Scrape Interval'),
+    '#default_value' => variable_get('bt_tracker_scrape_interval', 900),
+    '#description' => t('This is how often the torrent clients perform scrape requests to the tracker.'),
+  );
+  $form['intervals']['bt_tracker_prune_interval'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Auto-prune Interval'),
+    '#default_value' => variable_get('bt_tracker_prune_interval', 3600),
+    '#description' => t('Determines when entries in the active users table will be automatically removed. Please note that this is also dependent on how often cron is run.'),
+  );
+  $form['intervals']['bt_tracker_stats_interval'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Statistics Update Interval'),
+    '#default_value' => variable_get('bt_tracker_stats_interval', 3600),
+    '#description' => t('Determines how often the statistics for each torrent are regenerated based off of the active users table.'),
+  );
+  
+  $form['limits'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Tracker use requirements'),
+    '#description' => t('These settings determine whether or not a user retrieves a result from the tracker.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['limits']['bt_tracker_maximum_simultaneous_downloads'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of simultaneous downloads'),
+    '#default_value' => variable_get('bt_tracker_maximum_simultaneous_downloads', 0),
+    '#description' => t('This is how many downloads a user may have running simultaneously (0 for unlimited).'),
+  );
+  $form['limits']['bt_tracker_minimum_ratio'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum sharing ratio'),
+    '#default_value' => variable_get('bt_tracker_minimum_ratio', 0),
+    '#description' => t('This is the minimum ratio a user must have to recieve a response from the tracker (0 for unlimited).'),
+  );
+  
+  $form['web-seeding'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Web Seeding'),
+    '#description' => t('Web seeding allows the web server to act as a torrent client providing pieces of a download should no seeds be available. There are two implementation for web seeding. The "GetRight" implmentation is very simple to use, the torrent client queries the server for pieces of the file. A caveat is that there is no limiting how often this is used and who may use it. The second implmentation was proposed by "BitTornado" and it allows finer control over who may access files and when they may do so.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['web-seeding']['bt_tracker_web_seeding'] = array(
+    '#type' => 'radios',
+    '#title'  => t('Enable Web Seeding'),
+    '#options' => array(
+      t('Disabled'),
+      t('Enabled - GetRight'),
+      t('Enabled - BitTornado'),
+      t('Enabled - Both'),
+    ),
+    '#default_value' => variable_get('bt_tracker_web_seeding', 0),
+    '#description' => t('This determines whether or not the tracker will support web-seeding. The GetRight method is less secure and may be abused, while the BitTornado method is more secure.'),
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Return the passkey for the current user. If there is no passkey associated with the user OR 
+ *   the user does not have an entry in the bt_tracker_users table the passkey is generated and returned
+ * 
+ * @param $reset
+ *   If set to TRUE reset the user's passkey
+ * @return The user's passkey
+ */
+function bt_tracker_get_passkey($reset = FALSE) {
+  global $user;
+  
+  // Determine if the passkey needs to be reset.
+  $passkey_stat = db_fetch_array(db_query("SELECT btu.passkey_status, btu.passkey FROM {bt_tracker_users} btu WHERE uid = %d", $user->uid));
+  
+  if ($passkey_stat['passkey_status'] == 1 || $passkey_stat['passkey'] == NULL || $reset) {
+    $passkey = sha1($user->uid . $user->name . time() . variable_get('drupal_private_key', ''), TRUE);
+    
+    $in_table = db_result(db_query("SELECT COUNT(btu.passkey) FROM {bt_tracker_users} btu WHERE uid = %d LIMIT 1", $user->uid));
+    
+    if ($in_table) {
+      db_query("UPDATE {bt_tracker_users} btu SET btu.passkey = %b, btu.passkey_status = 0 WHERE uid = %d", $passkey, $user->uid);
+    }
+    else {
+      db_query("INSERT INTO {bt_tracker_users}(uid, passkey) VALUES (%d, %b)", $user->uid, $passkey);
+    }
+    
+    drupal_set_message(t('Your passkey has been updated please re-download any currently running torrents.'));
+  }
+  else {
+    $passkey = db_result(db_query("SELECT btu.passkey FROM {bt_tracker_users} btu WHERE uid = %d", $user->uid));
+  }
+  
+  return $passkey;
+}
+
+/**
+ * Implementation of hook_cron.
+ */
+function bt_tracker_cron() {
+  $last_prune = variable_get('bt_tracker_last_prune', 0);
+  
+  if (time() - $last_prune > variable_get('bt_tracker_prune_interval', 3600)) {        
+    db_query("DELETE FROM {bt_tracker_active_users} WHERE last_announce < %d", $last_prune);
+    variable_set('bt_tracker_last_prune', time());
+  }
+  
+  $last_regen = variable_get('bt_tracker_last_regen', 0);
+  if (time() - $last_regen > variable_get('bt_tracker_stats_interval', 3600)) {
+    // Update the statistics for the torrent based off of the active users table
+    // Update the seeders first
+    $result = db_query("SELECT bt.info_hash, COUNT(btau.ip) AS seeders FROM {bt_torrents} bt INNER JOIN {bt_tracker_active_users} btau ON btau.info_hash = bt.info_hash WHERE btau.bytes_left = 0 GROUP BY bt.info_hash");
+    while ($row = db_fetch_array($result)) {
+      db_query("UPDATE {bt_torrents} bt SET seeders = %d WHERE info_hash = %b", $row['seeders'], $row['info_hash']);
+    }
+    
+    $result = db_query("SELECT bt.info_hash, COUNT(btau.ip) AS seeders FROM {bt_torrents} bt LEFT JOIN {bt_tracker_active_users} btau ON btau.info_hash = bt.info_hash WHERE NOT btau.bytes_left = 0 OR btau.ip IS NULL GROUP BY bt.info_hash");
+    while ($row = db_fetch_array($result)) {
+      db_query("UPDATE {bt_torrents} bt SET seeders = %d WHERE info_hash = %b", $row['seeders'], $row['info_hash']);
+    }
+    
+    // Update the leechers
+    $result = db_query("SELECT bt.info_hash, COUNT(btau.ip) AS leechers FROM {bt_torrents} bt INNER JOIN {bt_tracker_active_users} btau ON btau.info_hash = bt.info_hash WHERE NOT btau.bytes_left = 0 GROUP BY bt.info_hash");
+    while ($row = db_fetch_array($result)) {
+      db_query("UPDATE {bt_torrents} bt SET leechers = %d WHERE info_hash = %b", $row['leechers'], $row['info_hash']);
+    }
+    
+    $result = db_query("SELECT bt.info_hash, COUNT(btau.ip) AS leechers FROM {bt_torrents} bt LEFT JOIN {bt_tracker_active_users} btau ON btau.info_hash = bt.info_hash WHERE btau.bytes_left = 0 OR btau.ip IS NULL GROUP BY bt.info_hash");
+    while ($row = db_fetch_array($result)) {
+      db_query("UPDATE {bt_torrents} bt SET leechers = %d WHERE info_hash = %b", $row['leechers'], $row['info_hash']);
+    }
+    
+    variable_set('bt_tracker_last_regen', time());
+  }
+
+}

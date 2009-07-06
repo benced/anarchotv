@@ -1,0 +1,12 @@
+<?php
+// $Id: asset_bonus.install,v 1.1.2.4 2008/02/05 19:39:22 wmostrey Exp $
+
+/**
+ * Implementation of hook_update()
+ */
+function asset_bonus_update_1() {
+  // This table was used in an older version but we don't need it anymore.
+  if(db_table_exists('asset_bonus')) {
+    db_query('DROP TABLE {asset_bonus}');
+  }
+}

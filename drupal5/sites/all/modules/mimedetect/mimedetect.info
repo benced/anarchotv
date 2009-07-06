@@ -1,0 +1,9 @@
+; $Id: mimedetect.info,v 1.2 2008/01/07 20:34:50 jpetso Exp $
+name = MimeDetect
+description = Provides common mime type detection for Drupal sites.
+
+; Information added by drupal.org packaging script on 2008-07-21
+version = "5.x-1.0"
+project = "mimedetect"
+datestamp = "1216674912"
+

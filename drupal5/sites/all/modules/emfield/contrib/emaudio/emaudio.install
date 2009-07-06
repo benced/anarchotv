@@ -1,0 +1,21 @@
+<?php
+// $Id: emaudio.install,v 1.2 2008/02/17 19:11:00 aaron Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function emaudio_install() {
+}
+
+function emaudio_update_1() {
+  $ret = _emaudio_update_reset_cache_views();
+  return $ret;
+}
+
+// I'd like this to be conditional, so it only runs if they don't have views installed.
+// however, module_exists doesn't actually work in the update scripts.
+function _emaudio_update_reset_cache_views() {
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM {cache_views}");
+  return $ret;
+}

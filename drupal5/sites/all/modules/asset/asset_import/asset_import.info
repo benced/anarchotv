@@ -1,0 +1,11 @@
+; $Id: asset_import.info,v 1.1.2.1 2008/01/22 19:38:51 wmostrey Exp $
+name = Asset Import
+description = Allows batches of images to be imported as assets from a directory on the server.
+package = Asset
+dependencies = asset
+
+; Information added by drupal.org packaging script on 2008-09-09
+version = "5.x-1.0-rc2"
+project = "asset"
+datestamp = "1220995502"
+

@@ -1,0 +1,135 @@
+<?php
+// $Id: workflow_ng.install,v 1.1.2.2.2.3 2008/02/06 17:04:24 fago Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function workflow_ng_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {cache_workflow_ng} (
+        cid varchar(255) NOT NULL default '',
+        data longblob,
+        expire int NOT NULL default '0',
+        created int NOT NULL default '0',
+        headers text,
+        PRIMARY KEY (cid),
+        INDEX expire (expire)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      db_query("CREATE TABLE {workflow_ng_cfgs} (
+        name varchar(255) NOT NULL default '',
+        data longblob,
+        altered tinyint(4) NOT NULL,
+        PRIMARY KEY (name)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+
+    case 'pgsql':
+      db_query("CREATE TABLE {cache_workflow_ng} (
+        cid varchar(255) NOT NULL default '',
+        data bytea,
+        expire int NOT NULL default '0',
+        created int NOT NULL default '0',
+        headers text,
+        PRIMARY KEY (cid)
+      )");
+      db_query("CREATE INDEX {cache_workflow_ng}_expire_idx ON {cache_workflow_ng} (expire)");
+      db_query("CREATE TABLE {workflow_ng_cfgs} (
+        name varchar(255) NOT NULL default '',
+        data bytea,
+        altered smallint NOT NULL,
+        PRIMARY KEY (name)
+      )");
+      break;
+  }
+}
+
+/*
+ * Implementation of hook_uninstall()
+ */
+function workflow_ng_uninstall() {
+  db_query("DROP TABLE {cache_workflow_ng}");
+  db_query("DROP TABLE {workflow_ng_cfgs}");
+  variable_del('workflow_ng_configurations');
+  variable_del('workflow_ng_show_fixed');
+}
+
+/*
+ * Helper function
+ * Applies the function $function to all elements
+ */
+function workflow_ng_helper_do_recursive($function, &$elements) {
+  $function($elements);
+  //recurse
+  foreach (element_children($elements) as $key) {
+    workflow_ng_helper_do_recursive($function, $elements[$key]);
+  }
+}
+
+/*
+ * Due to udpates of the token/system actions, the settings of conditions / actions have changed.
+ */
+function workflow_ng_update_5001() {
+
+  //Return all custom created configurations
+  $result = db_query("SELECT * FROM {workflow_ng_cfgs}");
+
+  while ($row = db_fetch_object($result)) {
+    $cfg = unserialize($row->data);
+    workflow_ng_helper_do_recursive('workflow_ng_update_5001_fix_args', $cfg);
+    db_query("UPDATE {workflow_ng_cfgs} SET data = '%s' WHERE name = '%s'", serialize($cfg), $row->name);
+  }
+  //clear cache
+  cache_clear_all('cfg_', 'cache_workflow_ng', TRUE);
+  variable_del('workflow_ng_configurations');
+  return array();
+}
+
+/*
+ * Updates an element of the configuration, called by workflow_ng_helper_do_recursive
+ */
+function workflow_ng_update_5001_fix_args(&$element) {
+  $settings = &$element['#settings'];
+
+  if ($element['#type'] == 'condition' && ($element['#name'] == 'workflow_ng_condition_token_compare' ||$element['#name'] == 'workflow_ng_condition_token_numeric') && isset($settings['used arguments1']) ) {
+    $settings['text1_args'] = $settings['used arguments1'];
+    $settings['text2_args'] = $settings['used arguments2'];
+    unset($settings['used arguments1']);
+    unset($settings['used arguments2']);
+  }
+  else if ($element['#type'] == 'action' && $element['#name'] == 'workflow_ng_action_drupal_message' && isset($settings['used arguments'])) {
+    $settings['message_args'] = $settings['used arguments'];
+    unset($settings['used arguments']);
+  }
+  else if ($element['#type'] == 'action' && $element['#name'] == 'workflow_ng_action_drupal_goto' && !isset($settings['fragment_args'])) {
+    $settings['fragment_args'] = $settings['path_args'];
+    $settings['query_args'] = $settings['path_args'];
+  }
+}
+
+/*
+ * Fixes the workflow-ng counter
+ */
+function workflow_ng_update_5002() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      //Return all custom created configurations
+      $result = db_query("SELECT MAX(CAST(SUBSTR(name, 5) AS SIGNED)) FROM {workflow_ng_cfgs}");
+      if ($id = db_result($result)) {
+        db_query("UPDATE {sequences} SET id = %d WHERE name = '%s'", $id, db_prefix_tables('{workflow_ng_cfg}_name'));
+      }
+      break;
+    //update for pgsql is missing..
+  }
+  return array();
+}
+
+/*
+ * Clear the menu cache
+ */
+function workflow_ng_update_5003() {
+  cache_clear_all('*', 'cache_menu', TRUE);
+  return array();
+}

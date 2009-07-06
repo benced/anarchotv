@@ -1,0 +1,328 @@
+<?php
+// $Id $
+/**
+ * encl_remote.module -- RSS Remote Enclosures
+ * Copyright (c) 2007 Eric Lloyd.
+ *
+ * Licensed to you under the terms of Version 2 of the Lesser GNU General Public License.
+ * See the LICENSE file in this archive for more information.
+ *
+ * Comments most certainly welcome!
+ * Drop me a line (no bots, please!): ewlloyd (shift-two) gmail (next to the comma) com.
+ */
+
+define('ENCL_REMOTE', 'encl_remote');
+define('ENCL_REMOTE_PERM_SET', 'set RSS Remote Enclosure');
+define('ENCL_REMOTE_PERM_ADMIN', 'administer RSS Remote Enclosures');
+define('ENCL_REMOTE_NODETYPES', 'encl_remote_nodetypes');
+define('ENCL_REMOTE_RSS_LINK', 'encl_remote_rss_link');
+define('ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY', 'encl_remote_registered_mime_types_only');
+define('ENCL_REMOTE_REGISTERED_MIME_TYPES_LIST', 'encl_remote_registered_mime_types_list');
+define('ENCL_REMOTE_MIME_TYPE_EXTENSIONS', 'encl_remote_mime_type_extensions');
+define('ENCL_REMOTE_WEIGHT', 'encl_remote_weight');
+// TODO: tighten up to just legal characters:
+define('ENCL_REMOTE_AD_HOC_MIME_TYPE_REGEX', '/^(application|audio|image|message|model|multipart|text|video|x-.+)\/.+$/');
+
+function encl_remote_perm() {
+  return array(ENCL_REMOTE_PERM_SET, ENCL_REMOTE_PERM_ADMIN);
+}
+
+function encl_remote_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/content/encl_remote',
+      'title' => t('RSS Remote Enclosures'),
+      'description' => t('Manage Remote Enclosures - content types, appearance, etc.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('encl_remote_form_admin'),
+      'access' => user_access(ENCL_REMOTE_PERM_ADMIN),
+      'type' => MENU_DYNAMIC_ITEM);
+  }
+  else {
+    return null;
+  }
+  return $items;
+}
+
+function encl_remote_form_admin($edit = array()) {
+	if (!_encl_remote_autosize_supported()) {
+		$form['autosize_warning'] = array(
+			'#type' => 'fieldset',
+			'#prefix' => '<strong style="color: red;">',
+			'#title' => t('Important Note'),
+			'#suffix' => '</strong>'
+		);
+		$form['autosize_warning']['message'] = array(
+			'#value' => t(
+				"Automatic enclosure size detection relies on features not found in PHP 4. ".
+				"Your users will have to enter the size of the files they're attaching by hand.<br/>".
+				"One more great reason to upgrade to PHP 5 - talk to your hosting provider today!")
+		);
+	}
+	$form[ENCL_REMOTE_NODETYPES] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Allowed Node Types'),
+    '#default_value' => variable_get(ENCL_REMOTE_NODETYPES, array()),
+    '#options' => node_get_types('names'),
+    '#description' => t('Select the node types you want to permit RSS Remote Enclosures for.')
+  );
+  $form[ENCL_REMOTE_RSS_LINK] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include Link in Feed'),
+    '#default_value' => variable_get(ENCL_REMOTE_RSS_LINK, false),
+    '#description' => t('Check to include the link in the text of the feed item.')
+  );
+  $mime_types_only_legend = 'Restrict to registered MIME types only';
+  $form[ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY] = array(
+  	'#type' => 'checkbox',
+  	'#title' => t($mime_types_only_legend),
+  	'#default_value' => variable_get(ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY, true),
+  	'#description' => t('Check to restrict the MIME type field to one of the listed MIME types.')
+  );
+  $form[ENCL_REMOTE_REGISTERED_MIME_TYPES_LIST] = array(
+  	'#type' => 'fieldset',
+  	'#collapsible' => true,
+  	'#title' => t("Registered MIME Types"),
+  	'#description' => t("These are the MIME types that are currently registered with RSS Remote Enclosures. If the \"$mime_types_only_legend\" option is set, these are the only MIME types allowed.")
+  );
+	$form[ENCL_REMOTE_REGISTERED_MIME_TYPES_LIST]['types'] = array(
+		'#prefix' => '<div><ul><li>',
+		'#value' => implode('</li><li>', variable_get(ENCL_REMOTE_MIME_TYPE_EXTENSIONS, null)),
+		'#suffix' => '</li></ul></div>'
+	);
+	$form[ENCL_REMOTE_WEIGHT] = array(
+		'#type' => 'weight',
+		'#title' => t('Weight'),
+		'#delta' => '100',
+		'#default_value' => variable_get(ENCL_REMOTE_WEIGHT, 30),
+		'#description' => t('Positions the RSS Remote Enclosures section relative to the rest of the node edit form.')
+	);
+  return system_settings_form($form);
+}
+
+function encl_remote_form_admin_submit($form_id, $form_values) {
+  $form_values[ENCL_REMOTE_NODETYPES] = array_filter($form_values[ENCL_REMOTE_NODETYPES]);
+  variable_set(ENCL_REMOTE_NODETYPES, $form_values[ENCL_REMOTE_NODETYPES]);
+  variable_set(ENCL_REMOTE_RSS_LINK, $form_values[ENCL_REMOTE_RSS_LINK]);
+  variable_set(ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY, $form_values[ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY]);
+  variable_set(ENCL_REMOTE_WEIGHT, $form_values[ENCL_REMOTE_WEIGHT]);
+  drupal_set_message('The configuration options have been saved.');
+}
+
+function encl_remote_nodeapi(&$node, $op, $teaser) {
+  if (!_encl_remote_is_nodetype_allowed($node->type)) { return; }
+  $encl_remote = $node->encl_remote;
+  
+  switch ($op) {
+  case 'delete':
+    db_query('DELETE FROM {encl_remotes} WHERE nid = %d', $node->nid);
+    break;
+
+  case 'load':
+    $encl_remote = db_fetch_object(db_query('SELECT * FROM {encl_remotes} er WHERE er.nid = %d LIMIT 1', $node->nid));
+    return array(ENCL_REMOTE => $encl_remote);
+    break;
+
+  case 'validate':
+    $post = $teaser['#post'];
+    if (!$post['url']) { return; }
+    if ($post['size']) {
+      if (!is_numeric($post['size'])) {
+        form_set_error('size', 'Size must be either numeric or blank.');
+      }
+    }
+    else {
+    	if (!_encl_remote_size($post['url'], $post['size'])) {
+    		form_set_error('size', 'File size could not be automatically determined. Please specify file size.');
+    	}
+    }
+    if ($post['mime_type']) {
+    	$mime_type = $post['mime_type'];
+    	if (!variable_get(ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY, true)) {
+				if (!preg_match(ENCL_REMOTE_AD_HOC_MIME_TYPE_REGEX, $mime_type)) {
+					form_set_error('mime_type', "'$mime_type' is not a valid MIME type.");
+				}
+    	}
+    	else {
+	      $types = variable_get(ENCL_REMOTE_MIME_TYPE_EXTENSIONS, null);
+	      if (!($types && in_array($post['mime_type'], $types))) {
+	      	$type_names = implode(', ', $types);
+	      	form_set_error('mime_type', "MIME type must be one of $type_names.");
+	      }
+    	}
+    }
+    break;
+    
+  case 'submit':
+    $node->encl_remote = (object)array(
+      'url' => $node->url, 
+      'link_text' => $node->link_text, 
+      'size' => $node->size, 
+      'mime_type' => $node->mime_type);
+    break;
+    
+  case 'update':
+  case 'insert':
+    db_query('DELETE FROM {encl_remotes} WHERE nid = %d', $node->nid);
+    if ($encl_remote->url) {
+      db_query("INSERT INTO {encl_remotes} (nid, url, mime_type, size, link_text) VALUES (%d, '%s', '%s', %d, '%s')",
+        $node->nid, 
+        $encl_remote->url, 
+        _encl_remote_mime_type($encl_remote->url, $encl_remote->mime_type), 
+        _encl_remote_size($encl_remote->url, $encl_remote->size), 
+        $encl_remote->link_text);
+    }
+    break;
+
+  case 'view':
+     if (variable_get(ENCL_REMOTE_RSS_LINK, false)) {
+       if ($teaser) {
+         $node->teaser .= _encl_remote_encl_link($encl_remote);
+       }
+       else {
+         $node->body .= _encl_remote_encl_link($encl_remote);
+       }
+     }
+    break;
+    
+  case 'rss item':
+    if ($encl_remote->url) {
+      // RSS 2.0 only allows one enclosure per item
+      return array(
+        array(
+          'key' => 'enclosure',
+          'attributes' => array(
+            'url' => check_url($encl_remote->url),
+            'length' => $encl_remote->size,
+            'type' => $encl_remote->mime_type
+          )
+        )
+      );
+    }
+    break;
+  }
+}
+
+function encl_remote_link($type, $node = null, $teaser = false) {
+  if ($type != 'node') { return; }
+  if (!_encl_remote_is_nodetype_allowed($node->type)) { return; }
+  if (!$node->encl_remote->link_text) { return; }
+  
+  $encl_remote = $node->encl_remote;
+  
+  $ret = array();
+  $ret[ENCL_REMOTE] = array(
+      'title' => $encl_remote->link_text, 
+      'href' => check_url($encl_remote->url), 
+      'attributes' => array('title' => 'Access the attached file')); 
+  return $ret;
+}
+
+function encl_remote_elements() {
+  return null;
+}
+
+function _encl_remote_registered_mime_types_csv() {
+	return implode(', ', variable_get(ENCL_REMOTE_MIME_TYPE_EXTENSIONS, null));
+}
+
+// returns a fully-formed link to the remote resource:
+function _encl_remote_encl_link($encl_remote) {
+  if ($encl_remote->url && $encl_remote->link_text) {
+    return "<p><a href='$encl_remote->url'>$encl_remote->link_text</a></p>";
+  }
+}
+
+function encl_remote_form_alter($form_id, &$form) {
+  // TODO: Alter the system_rss_feeds_settings form,
+  // instead of maintaining a discrete configuration surface
+  if (!isset($form['type'])) { return; }
+  $form_type = $form['type']['#value'];
+  if (!_encl_remote_is_nodetype_allowed($form_type)) { return; }
+  if ($form_type .'_node_form' == $form_id) {
+    $rss_link_text = variable_get(ENCL_REMOTE_RSS_LINK, false)? ", as well as a link in the text of the RSS feed": "";
+    $node = $form['#node'];
+    $encl_remote = $node->encl_remote;
+    $form[ENCL_REMOTE] = array(
+      '#type' => 'fieldset',
+      '#title' => t('RSS Remote Enclosure settings'),
+      '#collapsible' => true,
+      '#collapsed' => empty($encl_remote->url),
+      '#access' => user_access(ENCL_REMOTE_PERM_SET),
+      '#weight' => variable_get(ENCL_REMOTE_WEIGHT, 30),
+    );
+    $form[ENCL_REMOTE]['url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('URL'),
+      '#default_value' => $encl_remote->url,
+      '#maxlength' => 255,
+      '#collapsible' => true,
+      '#collapsed' => true,
+      '#description' => t("Specify the URL of a remote media resource that you would like added to this node's RSS item as an enclosure."),
+    );
+    $form[ENCL_REMOTE]['link_text'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Link Text'),
+      '#default_value' => $encl_remote->link_text,
+      '#maxlength' => 255,
+      '#collapsible' => true,
+      '#collapsed' => true,
+      '#description' => t("Text that appears here will appear below the body of the $form_type as a link to the remote file$rss_link_text. Leave blank to skip."),
+    );
+    $size_message = _encl_remote_autosize_supported()? 
+    	t("Optionally specify the size of the remote media resource. If you don't enter a value here, the remote server will be queried for the file size."):
+    	t("You <strong>must</strong> specify the size of the remote media resource.");
+    $form[ENCL_REMOTE]['size'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Size'),
+      '#default_value' => $encl_remote->size,
+      '#maxlength' => 15,
+      '#collapsible' => true,
+      '#collapsed' => true,
+      '#description' => $size_message,
+    );
+    	$types = _encl_remote_registered_mime_types_csv();
+    	$mime_explanation = variable_get(ENCL_REMOTE_REGISTERED_MIME_TYPES_ONLY, true)?
+    		t("The only supported MIME types are $types."):
+    		t("This field may be filled in automatically for some file types.");
+      $form[ENCL_REMOTE]['mime_type'] = array(
+      '#type' => 'textfield',
+      '#title' => t('MIME Type'),
+      '#default_value' => $encl_remote->mime_type,
+      '#maxlength' => 20,
+      '#collapsible' => true,
+      '#collapsed' => true,
+      '#description' => t("Specify the MIME type of the remote media resource. $mime_explanation"),
+    );
+  }
+}
+
+function _encl_remote_is_nodetype_allowed($nodetype) {
+  $types = variable_get(ENCL_REMOTE_NODETYPES, array());
+  return isset($types[$nodetype]);
+}
+
+function _encl_remote_mime_type($url, $default) {
+  preg_match('/\.(\w*)$/', $url, $m);
+  $encl_types = variable_get(ENCL_REMOTE_MIME_TYPE_EXTENSIONS, array());
+  return $default? $default: $encl_types[$m[1]];  
+}
+
+function _encl_remote_size($url, $default) {
+	if ($default) { return $default; }
+	if (!_encl_remote_autosize_supported()) { return 0; }
+  // Kudos to Josh Finlay (josh at glamourcastle dot com) in his post here:
+  // http://www.php.net/manual/en/function.filesize.php#54358
+  // I've stripped out the FTP support (may be restored if needed, but I'm a bit rushed):
+  $parsed = parse_url($url);
+  if (($parsed['scheme'] != "http") && ($parsed['scheme'] != "https")) { return 0; }
+  $headers = get_headers($url, 1);
+  return (array_key_exists("Content-Length", $headers))? $headers["Content-Length"]: 0;
+}
+
+function _encl_remote_autosize_supported() {
+	return function_exists('get_headers');
+}
+
+?>

@@ -1,0 +1,136 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function asset_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {asset} (
+        aid int(10) unsigned NOT NULL,
+        type varchar(32) NOT NULL default '',
+        dirname varchar(128) NOT NULL default '',
+        extension varchar(128) NOT NULL default '',
+        filename varchar(255) NOT NULL default '',
+        filesize int(11) NOT NULL default '0',
+        uid int(10) unsigned NOT NULL,
+        status tinyint unsigned NOT NULL, 
+        author varchar(128) NOT NULL default '',
+        title varchar(128) NOT NULL default '',
+        description text NOT NULL,
+        PRIMARY KEY  (aid)
+      ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      db_query("CREATE TABLE {asset_node} (
+        aid int(10) unsigned NOT NULL,
+        nid int(10) unsigned NOT NULL,
+        refs int(10) unsigned NOT NULL default '0',
+        PRIMARY KEY  (aid,nid)
+      ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      db_query("CREATE TABLE {asset_role} (
+        aid int(10) unsigned NOT NULL,
+        rid int(10) unsigned NOT NULL,
+        status tinyint unsigned NOT NULL default '0',
+        PRIMARY KEY  (aid,rid)
+      ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+            
+    case 'pgsql':
+      db_query("CREATE TABLE {asset} (
+        aid SERIAL,
+        type varchar(32) NOT NULL default '',
+        dirname varchar(128) NOT NULL default '',
+        extension varchar(128) NOT NULL default '',
+        filename varchar(255) NOT NULL default '',
+        filesize bigint NOT NULL default '0',
+        uid integer NOT NULL,
+        status smallint NOT NULL, 
+        author varchar(128) NOT NULL default '',
+        title varchar(128) NOT NULL default '',
+        description text NOT NULL,
+        PRIMARY KEY (aid)
+      )");
+      db_query("CREATE TABLE {asset_node} (
+        aid integer NOT NULL,
+        nid integer NOT NULL,
+        refs integer NOT NULL default '0',
+        PRIMARY KEY (aid,nid)
+      )");
+      db_query("CREATE TABLE {asset_role} (
+        aid integer NOT NULL,
+        rid integer NOT NULL,
+        status smallint NOT NULL default '0',
+        PRIMARY KEY (aid,rid)
+      )");
+      break;
+  }
+  drupal_set_message(t('Asset tables have been configured.'));
+}
+
+function asset_update_1() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    case 'pgsql':
+      $ret[] = update_sql("ALTER TABLE {asset} ADD COLUMN type varchar(32) NOT NULL default ''");
+      $ret[] = update_sql("UPDATE {asset} SET type='local'");
+      break;
+  }
+  return $ret; 
+}
+
+function asset_update_2() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    case 'pgsql':
+      $ret[] = update_sql("UPDATE {asset} SET dirname = TRIM('/' FROM REPLACE(dirname,'sites/default/files',''))");
+      break;
+  }
+  return $ret; 
+}
+
+/*
+ * Add asset_role table
+ */
+function asset_update_3() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("CREATE TABLE {asset_role} (
+        aid int(10) unsigned NOT NULL,
+        rid int(10) unsigned NOT NULL,
+        status tinyint unsigned NOT NULL default '0',
+        PRIMARY KEY  (aid,rid)
+      ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+    case 'pgsql':
+      $ret[] = update_sql("CREATE TABLE {asset_role} (
+        aid integer NOT NULL,
+        rid integer NOT NULL,
+        status smallint NOT NULL default '0',
+        PRIMARY KEY  (aid,rid)
+      )");
+      break;
+  }
+  return $ret;
+}
+
+/**
+ * Give directories their own asset type.
+ */
+function asset_update_4() {
+  $ret[] = update_sql("UPDATE {asset} SET type='directory' WHERE type='local' AND extension=''");
+  $dir = 'PUBLIC';
+  if(asset_check_directory($dir, FILE_CREATE_DIRECTORY)){
+    drupal_set_message('Created PUBLIC asset directory');
+    db_query("UPDATE {asset} SET status=1 WHERE type='directory' AND dirname='' AND filename='PUBLIC'");
+  }
+  return $ret;
+}
+
+function asset_uninstall() {
+  db_query('DROP TABLE {asset}');
+  db_query('DROP TABLE {asset_node}');
+  db_query('DROP TABLE {asset_role}');
+}

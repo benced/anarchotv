@@ -1,0 +1,22 @@
+.asset-align-left{
+  float: left;
+  margin-right: 2em;
+}
+
+.asset-align-right{
+  float: right;
+  margin-left: 2em;
+}
+
+.asset-align-center{
+  float: none;
+  clear: both;
+  text-align: center;
+}
+
+.asset-align-none{
+}
+
+.asset-asset-link{
+  display: inline;
+}

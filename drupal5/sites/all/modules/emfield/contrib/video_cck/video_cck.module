@@ -1,0 +1,456 @@
+<?php
+// $Id: video_cck.module,v 1.10 2008/05/11 03:56:54 alexua Exp $
+
+define('VIDEO_CCK_DEFAULT_VIDEO_WIDTH', 425);
+define('VIDEO_CCK_DEFAULT_VIDEO_HEIGHT', 350);
+define('VIDEO_CCK_DEFAULT_PREVIEW_WIDTH', 425);
+define('VIDEO_CCK_DEFAULT_PREVIEW_HEIGHT', 350);
+define('VIDEO_CCK_DEFAULT_THUMBNAIL_WIDTH', 120);
+define('VIDEO_CCK_DEFAULT_THUMBNAIL_HEIGHT', 90);
+
+/**
+ *  Implement hook_emfield_info
+ */
+function video_cck_emfield_info() {
+  $name = t('Embedded Video Field');
+  return array(
+    '#name' => $name,
+    '#settings_description' => t('The following settings configure content with any fields controlled by @name.', array('@name' => $name)),
+  );
+}
+
+/**
+ * Implement hook_settings
+ */
+function video_cck_emfield_settings() {
+  $form = array();
+  return $form;
+}
+
+/**Implementation of hook_field_info  **/
+
+function video_cck_field_info() {
+  $fields = array(
+    'video_cck' => array('label' => t('Embedded Video')),
+  );
+  return $fields;
+}
+
+/** Implementation of hook_field_settings **/
+
+function video_cck_field_settings($op, $field) {
+  switch ($op) {
+
+    case 'database columns':
+      $columns = array(
+        'embed' => array('type' => 'longtext', 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+        'value' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+        'provider' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+        'data' => array('type' => 'longtext', 'not null' => TRUE, 'default' => "''", 'sortable' => false),
+      );
+      switch ($field['type']) {
+        case 'video_cck':
+          break;
+      }
+      return $columns;
+      break;
+    case 'filters':
+      return array(
+        'not null' => array(
+          'name' => t('Has Embedded Video'),
+          'operator' => array('=' => t('Has Embedded Video')),
+          'list' => 'views_handler_operator_yesno',
+          'list-type' => 'select',
+          'handler' => 'emfield_views_handler_filter_is_not_null',
+          'help' => t('Selecting yes will choose only nodes with this field that successfully provide an embedded video.'),
+        ),
+        'provider' => array(
+          'name' => t('Video Provider'),
+          'list' => 'emfield_views_handler_filter_provider_list',
+          'list-type' => 'list',
+          'operator' => 'views_handler_operator_or',
+          'value-type' => 'array',
+          'handler' => 'emfield_views_handler_filter_provider',
+          'help' => t('Include or exclude videos from the selected provider.'),
+        ),
+      );
+      break;
+    case 'arguments':
+      return array(
+        'content: ' . $field['field_name'] => array(
+          'name' => t('Embedded Video: @widget (@field)', array('@widget' => $field['widget']['label'], '@field' => $field['field_name'])),
+          'handler' => 'content_views_argument_handler',
+          'help' => t('This is the default argument handler provided by CCK. It uses the original embed code or URL pasted into the field.'),
+        ),
+        'provider: ' . $field['field_name'] => array(
+          'name' => t('Embedded Video Provider: @widget (@field)', array('@widget' => $field['widget']['label'], '@field' => $field['field_name'])),
+          'handler' => 'video_cck_handler_arg_provider',
+          'help' => t('The Embedded Video Provider argument allows users to filter a view by specifying the video provider.'),
+        ),
+      );
+      break;
+  }
+}
+
+//** Implementation of hook_field **/
+function video_cck_field($op, &$node, $field, &$items, $teaser, $page) {
+  if (module_hook('emfield', 'emfield_field')) {
+    return emfield_emfield_field($op, $node, $field, $items, $teaser, $page, 'video_cck');
+  }
+}
+
+/** Implementation of hook_field_formatter_info **/
+function video_cck_field_formatter_info() {
+  $types = array('video_cck',);
+  $formats = array(
+    'default' => array(
+      'label' => t('Default'),
+      'field types' => $types,
+    ),
+    'video_video' => array(
+      'label' => t('Full Size Video'),
+      'field types' => $types,
+    ),
+    'video_preview' => array(
+      'label' => t('Preview Video'),
+      'field types' => $types,
+    ),
+    'video_thumbnail' => array(
+      'label' => t('Image Thumbnail'),
+      'field types' => $types,
+    ),
+    'video_embed' => array(
+      'label' => t('Embed Code'),
+      'field types' => $types,
+    ),
+  );
+  // add thickbox formatter if thickbox module exists
+  if (module_exists('thickbox')) {
+    $formats['thickbox'] = array(
+      'label' => t('Thickbox: Image Thumbnail -> Full Size Video'),
+      'field types' => $types,
+      );
+  }
+  return $formats;
+}
+
+/** Implementation of hook_field_formatter **/
+function video_cck_field_formatter($field, $item, $formatter, $node) {
+  return module_invoke('emfield', 'emfield_field_formatter', $field, $item, $formatter, $node, 'video_cck');
+}
+
+/** Widgets **/
+
+/** Implementation of hook_widget_info **/
+function video_cck_widget_info() {
+  return array(
+    'video_cck_textfields' => array(
+      'label' => t('3rd Party Video'),
+      'field types' => array('video_cck',),
+    ),
+  );
+}
+
+function video_cck_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'form':
+      if ($widget['type'] == 'video_cck_textfields') {
+        $form = (array)module_invoke('emfield', 'emfield_widget_settings', 'form', $widget, 'video_cck');
+        $width = variable_get('video_cck_default_video_width', VIDEO_CCK_DEFAULT_VIDEO_WIDTH);
+        $height = variable_get('video_cck_default_video_height', VIDEO_CCK_DEFAULT_VIDEO_HEIGHT);
+        $form['video'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Video Display Settings'),
+          '#description' => t('These settings control how this video is displayed in its full size, which defaults to @widthx@height.', array('@width' => $width, '@height' => $height)),
+          '#collapsible' => true,
+          '#collapsed' => false,
+        );
+        $form['video']['video_width'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Video display width'),
+          '#default_value' => $widget['video_width'] ? $widget['video_width'] : $width,
+          '#required' => true,
+          '#description' => t('The width of the video. It defaults to @width.', array('@width' => $width)),
+        );
+        $form['video']['video_height'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Video display height'),
+          '#default_value' => $widget['video_height'] ? $widget['video_height'] : $height,
+          '#required' => true,
+          '#description' => t('The height of the video. It defaults to @height.', array('@height' => $height)),
+        );
+        $form['video']['video_autoplay'] = array(
+          '#type' => 'checkbox',
+          '#title' => t('Autoplay'),
+          '#default_value' => $widget['video_autoplay'] ? $widget['video_autoplay'] : false,
+          '#description' => t('If supported by the provider, checking this box will cause the video to automatically begin after the video loads when in its full size.'),
+        );
+
+        $width = variable_get('video_cck_default_preview_width', VIDEO_CCK_DEFAULT_PREVIEW_WIDTH);
+        $height = variable_get('video_cck_default_preview_height', VIDEO_CCK_DEFAULT_PREVIEW_HEIGHT);
+        $form['preview'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Video Preview Settings'),
+          '#description' => t('These settings control how this video is displayed in its preview size, which defaults to @widthx@height.', array('@width' => $width, '@height' => $height)),
+          '#collapsible' => true,
+          '#collapsed' => false,
+        );
+        $form['preview']['preview_width'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Video preview width'),
+          '#default_value' => $widget['preview_width'] ? $widget['preview_width'] : variable_get('video_cck_default_preview_width', VIDEO_CCK_DEFAULT_PREVIEW_WIDTH),
+          '#required' => true,
+          '#description' => t('The width of the preview video. It defaults to @width.', array('@width' => $width)),
+        );
+        $form['preview']['preview_height'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Video preview height'),
+          '#default_value' => $widget['preview_height'] ? $widget['preview_height'] : variable_get('video_cck_default_preview_height', VIDEO_CCK_DEFAULT_PREVIEW_HEIGHT),
+          '#required' => true,
+          '#description' => t('The height of the preview video. It defaults to @height.', array('@height' => $height)),
+        );
+        $form['preview']['preview_autoplay'] = array(
+          '#type' => 'checkbox',
+          '#title' => t('Autoplay'),
+          '#default_value' => $widget['preview_autoplay'] ? $widget['preview_autoplay'] : false,
+          '#description' => t('If supported by the provider, checking this box will cause the video to automatically begin after the video loads when in its preview size.'),
+        );
+
+        $width = variable_get('video_cck_default_thumbnail_width', VIDEO_CCK_DEFAULT_THUMBNAIL_WIDTH);
+        $height = variable_get('video_cck_default_thumbnail_height', VIDEO_CCK_DEFAULT_THUMBNAIL_HEIGHT);
+        $form['tn'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Thumbnail'),
+          '#description' => t('When displayed as a thumbnail, these settings control the image returned. Note that not all 3rd party video content providers offer thumbnails, and others may require an API key or other requirements. More information from the !settings. The default size for thumbnails is @widthx@height.', array('!settings' => l(t('settings page'), 'admin/content/video_cck'), '@width' => $width, '@height' => $height)),
+          '#collapsible' => true,
+          '#collapsed' => false,
+        );
+        $form['tn']['thumbnail_width'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Thumbnail width'),
+          '#default_value' => $widget['thumbnail_width'] ? $widget['thumbnail_width'] : variable_get('video_cck_default_thumbnail_width', VIDEO_CCK_DEFAULT_THUMBNAIL_WIDTH),
+          '#required' => true,
+          '#description' => t('The width of the thumbnail. It defaults to @width.', array('@width' => $width)),
+        );
+        $form['tn']['thumbnail_height'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Thumbnail height'),
+          '#default_value' => $widget['thumbnail_height'] ? $widget['thumbnail_height'] : variable_get('video_cck_default_thumbnail_height', VIDEO_CCK_DEFAULT_THUMBNAIL_HEIGHT),
+          '#required' => true,
+          '#description' => t('The height of the thumbnail. It defaults to @height.', array('@height' => $height)),
+        );
+        if (!module_exists('emthumb')) {
+          $tn_desc = t(' You may be interested in activating the Embedded Media Thumbnails module as well, which will allow you to specify custom thumbnails on a per-node basis.');
+        }
+        $form['tn']['thumbnail_default_path'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Default thumbnail path'),
+          '#default_value' => $widget['thumbnail_default_path'] ? $widget['thumbnail_default_path'] : variable_get('video_cck_default_thumbnail_path',''),
+          '#description' => t('Path to a local default thumbnail image for cases when a thumbnail can\'t be found. For example, you might have a default thumbnail at %files.', array('%files' => 'files/thumbnail.png')) . $tn_desc,
+        );
+      }
+      return $form;
+
+    case 'validate':
+      if ($widget['type'] == 'video_cck_textfields') {
+        if (!is_numeric($widget['video_width']) || intval($widget['video_width']) != $widget['video_width'] || $widget['video_width'] < 1) {
+          form_set_error('video_width', t('"Video width" must be a positive integer.'));
+        }
+        if (!is_numeric($widget['video_height']) || intval($widget['video_height']) != $widget['video_height'] || $widget['video_height'] < 1) {
+          form_set_error('video_height', t('"Video height" must be a positive integer.'));
+        }
+        if (!is_numeric($widget['preview_width']) || intval($widget['preview_width']) != $widget['preview_width'] || $widget['preview_width'] < 1) {
+          form_set_error('preview_width', t('"Preview width" must be a positive integer.'));
+        }
+        if (!is_numeric($widget['preview_height']) || intval($widget['preview_height']) != $widget['preview_height'] || $widget['preview_height'] < 1) {
+          form_set_error('preview_height', t('"Preview height" must be a positive integer.'));
+        }
+        if (!is_numeric($widget['thumbnail_width']) || intval($widget['thumbnail_width']) != $widget['thumbnail_width'] || $widget['thumbnail_width'] < 1) {
+          form_set_error('thumbnail_width', t('"Thumbnail width" must be a positive integer.'));
+        }
+        if (!is_numeric($widget['thumbnail_height']) || intval($widget['thumbnail_height']) != $widget['thumbnail_height'] || $widget['thumbnail_height'] < 1) {
+          form_set_error('thumbnail_height', t('"Thumbnail height" must be a positive integer.'));
+        }
+      }
+      break;
+
+    case 'save':
+      if ($widget['widget']['type'] == 'video_cck_textfields') {
+        $columns = array('video_width', 'video_height', 'video_autoplay', 'preview_width', 'preview_height', 'preview_autoplay', 'thumbnail_width', 'thumbnail_height', 'thumbnail_default_path', );
+        $columns = array_merge($columns, module_invoke('emfield', 'emfield_widget_settings', 'save', $widget, 'video_cck'));
+        return $columns;
+      }
+      break;
+  }
+}
+
+/** Implementation of hook_widget **/
+
+function video_cck_widget($op, &$node, $field, &$node_field) {
+  if (module_hook('emfield', 'emfield_widget')) {
+    return emfield_emfield_widget($op, $node, $field, $node_field, 'video_cck');
+  }
+}
+
+function video_cck_embed_form($field, $item, $formatter, $node) {
+  $embed = $item['value'];
+  $width = $field['widget']['video_width'];
+  $height = $field['widget']['video_height'];
+  $autoplay = $field['widget']['video_autoplay'];
+  $text = module_invoke('emfield', 'include_invoke', 'video_cck', $item['provider'], 'video', $embed, $width, $height, $field, $item, $autoplay);
+  $form = array();
+  $form['video_cck_embed'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Embed Code'),
+    '#description' => t('To embed this video on your own site, simply copy and paste the html code from this text area.'),
+    '#default_value' => $text,
+  );
+  return $form;
+}
+
+/**
+ *  providers may supply an enclosure for rss feeds. this expects something in a file format, so would be an object
+ *  in the format of $file->filepath, $file->filesize, and $file->filemime.
+ *  calls the providers hook video_cck_PROVIDER_rss($item, $teaser)
+ */
+function video_cck_emfield_rss($node, $items = array(), $teaser = NULL) {
+  $rss_data = array();
+  foreach ($items as $item) {
+    // note only the first $item will get an RSS enclosure, other items may have media: data in the feed however
+    if ($item['value'] && $item['provider']) {
+      $rss_data[] = module_invoke('emfield', 'include_invoke', 'video_cck', $item['provider'], 'rss', $item, $teaser);
+    }
+  }
+  return $rss_data;
+}
+
+function theme_video_cck_video_embed($field, $item, $formatter, $node) {
+  /*
+    Note you can use this in node.tpl.php, substituting the proper field type:
+    $field_type = 'field_video';
+    $system_types = _content_type_info();
+    $field = $system_types['fields'][$field_type];
+    $field['widget'] = $system_types['content types'][$node->type]['fields'][$field_type]['widget'];
+    print theme('video_cck_video_embed', $field, $node->{$field_type}[0], 'video_cck_embed', $node);
+   */
+  if ($item['value'] && $item['provider']) {
+    $output = drupal_get_form('video_cck_embed_form', $field, $item, $formatter, $node);
+  }
+  return $output;
+}
+
+function theme_video_cck_video_thumbnail($field, $item, $formatter, $node, $no_link = false, $options = array()) {
+  if ($item['value'] && $item['provider']) {
+    // if we have emthumb installed, then give it a chance to override our thumbnail
+    $thumbnail_url = module_invoke('emthumb', 'thumbnail_url', $item);
+
+    // if we don't have a custom thumbnail, then see if the provider gives us one
+    $thumbnail_url = $thumbnail_url ? $thumbnail_url : module_invoke('emfield', 'include_invoke', 'video_cck', $item['provider'], 'thumbnail', $field, $item, $formatter, $node, $width, $height, $options);
+
+    // if we still don't have a thumbnail, then apply a default thumbnail, if it exists
+    if (!$thumbnail_url) {
+      $default_thumbnail_url = $field['widget']['thumbnail_default_path'] ? $field['widget']['thumbnail_default_path'] : variable_get('video_cck_default_thumbnail_path', NULL);
+      if ($default_thumbnail_url) {
+        $thumbnail_url = base_path() . $default_thumbnail_url;
+      }
+    }
+  }
+  else {
+    // seems to be an unknown video
+    // apply a default thumbnail, if it exists
+    if (!$thumbnail_url) {
+      $default_thumbnail_url = $field['widget']['thumbnail_default_path'] ? $field['widget']['thumbnail_default_path'] : variable_get('video_cck_default_thumbnail_path', NULL);
+      if ($default_thumbnail_url) {
+        $thumbnail_url = base_path() . $default_thumbnail_url;
+      }
+    }
+  }
+
+  if ($thumbnail_url) {
+    $width = $field['widget']['thumbnail_width'] ? $field['widget']['thumbnail_width'] : variable_get('video_cck_default_thumbnail_width', VIDEO_CCK_DEFAULT_THUMBNAIL_WIDTH);
+    $height = $field['widget']['thumbnail_height'] ? $field['widget']['thumbnail_height'] : variable_get('video_cck_default_thumbnail_height', VIDEO_CCK_DEFAULT_THUMBNAIL_HEIGHT);
+    if ($no_link) { //thickbox requires the thumbnail returned without the link
+      $output = '<img src="' . $thumbnail_url . '" width="' . $width  . '" height="' . $height  . '" alt="' . t('See Video') . '" title="' . t('See Video') . '" />';
+    }
+    else {
+      $output = l('<img src="' . $thumbnail_url . '" width="' . $width  . '" height="' . $height  . '" alt="' . t('See Video') . '" title="' . t('See Video') . '" />', 'node/' . $node->nid, array(), NULL, NULL, false, true);
+    }
+  }
+  else {
+     // if all else fails, then just print a 'see video' link.
+    if ($no_link) {
+      $output = ''; //thickbox won't work without a thumbnail
+    }
+    else {
+      $output = l(t('See Video'), 'node/' . $node->nid);
+    }
+  }
+
+  return $output;
+}
+
+function theme_video_cck_video_video($field, $item, $formatter, $node, $options = array()) {
+  if ($item['value'] && $item['provider']) {
+    $embed = $item['value'];
+    $width = $field['widget']['video_width'] ? $field['widget']['video_width'] : variable_get('video_cck_default_video_width', VIDEO_CCK_DEFAULT_VIDEO_WIDTH);;
+    $height = $field['widget']['video_height'] ? $field['widget']['video_height'] : variable_get('video_cck_default_video_height', VIDEO_CCK_DEFAULT_VIDEO_HEIGHT);;
+    $autoplay = $field['widget']['video_autoplay'];
+    $output = module_invoke('emfield', 'include_invoke', 'video_cck', $item['provider'], 'video', $embed, $width, $height, $field, $item, $autoplay, $options);
+  }
+  return $output;
+}
+
+function theme_video_cck_default($field, $item, $formatter, $node, $options = array()) {
+  return theme('video_cck_video_video', $field, $item, $formatter, $node, $options);
+}
+
+function theme_video_cck_video_preview($field, $item, $formatter, $node, $options = array()) {
+  if ($item['value'] && $item['provider']) {
+    $embed = $item['value'];
+    $width = $field['widget']['preview_width'] ? $field['widget']['preview_width'] : variable_get('video_cck_default_preview_width', VIDEO_CCK_DEFAULT_PREVIEW_WIDTH);;
+    $height = $field['widget']['preview_height'] ? $field['widget']['preview_height'] : variable_get('video_cck_default_preview_height', VIDEO_CCK_DEFAULT_PREVIEW_HEIGHT);;
+    $autoplay = $field['widget']['preview_autoplay'];
+    $output = module_invoke('emfield', 'include_invoke', 'video_cck', $item['provider'], 'preview', $embed, $width, $height, $field, $item, $autoplay, $options);
+  }
+  return $output;
+}
+
+function theme_video_cck_thickbox($field, $item, $formatter, $node, $options = array()) {
+  $thumbnail = theme('video_cck_video_thumbnail', $field, $item, 'video_thumbnail', $node, true, $options);
+
+  $destination = 'video-cck/thickbox/'. $node->nid .'/'. $field['widget']['video_width'] .'/'. $field['widget']['video_height'] .'/'. $field['field_name'];
+
+  $output = l($thumbnail, $destination, array('title' => $title, 'class' => 'thickbox', 'rel' => $field['type_name']), NULL, NULL, FALSE, TRUE);
+  return $output;
+}
+
+function video_cck_handler_arg_provider($op, &$query, $argtype, $arg = '') {
+  return _emfield_handler_arg_provider($op, $query, $argtype, $arg, 'video_cck');
+}
+
+function video_cck_menu ($may_cache) {
+  $items = array();
+  if (module_exists('thickbox')) {
+    if ($may_cache) {
+      $items[] = array(
+        'path' => 'video-cck/thickbox',
+        'callback' => 'video_cck_thickbox',
+        'access' => user_access('access content'),
+        'type' => MENU_CALLBACK,
+        );
+    }
+  }
+  return $items;
+}
+
+function video_cck_thickbox($nid, $width, $height, $field_name) {
+    $field = array();
+    $field['widget']['video_width'] = $width;
+    $field['widget']['video_height'] = $height;
+    $field['widget']['video_autoplay'] = 1;
+    $field['field_name'] = $field_name;
+    $node = node_load($nid);
+    $items = $node->$field_name;
+    $item = $items[0];
+    print theme('video_cck_video_video', $field, $item, 'video_video', $node);
+}

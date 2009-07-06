@@ -1,0 +1,11 @@
+; $Id: asset_panels.info,v 1.1.2.2 2008/07/24 10:35:31 wmostrey Exp $
+name = Asset Panels
+description = Panels support for the asset module.
+package = Asset
+dependencies = asset panels
+
+; Information added by drupal.org packaging script on 2008-09-09
+version = "5.x-1.0-rc2"
+project = "asset"
+datestamp = "1220995502"
+

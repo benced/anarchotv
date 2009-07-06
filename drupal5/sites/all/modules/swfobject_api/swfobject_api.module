@@ -1,0 +1,186 @@
+<?php 
+
+// $Id: swfobject_api.module,v 1.2.2.8.2.2 2008/09/11 19:57:31 arthuregg Exp $
+
+/* Please see the README.txt file for more information on this module */
+
+
+/** 
+ *  Implementation of hook_help()
+ */
+function swfobject_api_help($section) {
+  $output = '';
+  switch ($section) {
+    case 'admin/help#swfobject_api':
+    case 'admin/settings/swfobject_api':
+      return t('This module creates an API for flash content generation in pages based on the swfObject library. For more information, visit <a href="http://blog.deconcept.com/swfobject/">http://blog.deconcept.com/swfobject/</a>.');
+    break;
+    
+  }
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function swfobject_api_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/swfobject_api',
+      'title' => t('SWFObject API'),
+      '#description' => t('Configure the SWFObject API.'),
+      'access' => user_access('administer nodes'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'swfobject_api_settings_form'
+    );
+  }
+  return $items;
+}
+
+
+/**
+ * Menu callback: SWFObject API configuration form.
+ */
+function swfobject_api_settings_form() {
+  $form = array();
+
+  $form['swfobject_api_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Settings'),
+    '#tree' => TRUE
+  );
+  $form['swfobject_api_settings']['swfoa_version'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default minimum version required'),
+    '#description' => t('This value can be overridden via the theme call.'),
+    '#default_value' => variable_get('swfoa_express', '6'),
+    '#required' => TRUE
+  );
+  $form['swfobject_api_settings']['swfoa_express'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable express install.'),
+    '#description' => t('Express install allows player upgrades without having to leave the site. Only versions 6.0.65 and above are supported.'),
+    '#default_value' => variable_get('swfoa_express', ''),
+  );
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Save settings'));
+
+  return system_settings_form($form);
+}
+
+
+/**
+ * builds the swf params, flashvars and attributes to be passed back to the 
+ * swfobject
+ *
+ * @param array $flashvars
+ * @param array $params
+ * @param array $attributes
+ * @return string
+ *   javascript 
+ */
+function swfobject_api_build_variables($flashvars = null, $params = null, $attributes = null) {
+  $build['flashvars'] = $flashvars;
+  $build['params'] = $params;
+  $build['attributes'] = $attributes;
+  foreach ($build as $type => $values) {
+    $items[] = "  var $type = ". drupal_to_js($values) .';';    
+  }
+  return implode("\n", $items);
+}
+
+
+/**
+ * Implementation of theme
+ * @param $url 
+ *   a web accessible url to the flash file
+ * @param $params 
+ *   An associative array of parameters that describe the SWF
+ * @param $flashvars
+ *     An associative array of variables to pass through to the SWF flashvars value
+ * @return 
+ *   themed html
+ */
+function theme_swfobject_api($url, $params = null, $flashvars = null, $id = null) {
+  static $id_count;  
+  
+  // get the path to thje swf object library
+  drupal_add_js(drupal_get_path('module', 'swfobject_api') .'/swfobject.js');
+  
+  $base_params = array(
+    'width' => '100%',
+    'height' => '100%',
+    'no_flash' => t('Sorry, you need to install flash to see this content.'),
+    'version' => variable_get('swfoa_version', '5'),
+    'type' => 'movie',
+    'bg_color' => '#FFFFFF'
+  );
+  
+  $params = array_merge($base_params, $params);
+  
+  // Express install redirect URL: as per the SWFObject docs, this should
+  // actually be xiRedirectUrl; variable name changed for simplicity.
+  if (isset($param['express_redirect'])) {
+    $redirect = $param['express_redirect'];
+  }
+ 
+  // create a unique id, use what's passed in, what has been saved locally
+  if ($id) { $id_count = $id; }
+  else {
+    $id_count = $id_count ? $id_count : 1;
+  }
+  
+  // set the name of the swf file
+  $name = form_clean_id(str_replace('.swf', '', basename($url))) .'_'. $id_count;
+ 
+  // set the div id to the params
+  if ($params['div_id']) {
+    $div_id = $params['div_id'];
+    unset($params['div_id']);
+  }
+  else {    
+    $div_id = 'flashcontent_'. $name;
+  }
+  
+  // build the class
+  // @TODO should use drupal attributes here to better deal with this
+  if ($params['class']) {
+    $class = ' class="'. $params['class'] .'"';
+    unset($params['class']);
+  }
+  
+  // build the div structure
+  $html[]  = '<div id="'. $div_id .'" '. $class .'>'. $params['no_flash'] .'</div>';
+ 
+  // build the javascript output
+  $html[] = '<script type="text/javascript"><!-- ';
+ 
+  
+  // Express install redirect URL: as per the SWFObject docs, this should
+  // actually be xiRedirectUrl; variable name changed for simplicity.
+  if (! $params['express_redirect']) {
+    $params['express_redirect'] = variable_get('swfoa_express', true) ? base_path() . drupal_get_path('module', 'swfobject_api') .'/expressinstall.swf' : 'false';
+  }
+
+  // Set the minimum version of flash expected
+  if (! $params['version']) {
+    $params['version'] = variable_get('swfoa_version', 9) ? variable_get('swfoa_express', "9.0.0") : 'false';
+  }
+  
+  // get the parameters for this object
+  $script[] = swfobject_api_build_variables($flashvars, $params, $attributes);
+  
+  // build the swfobject the swfojbect
+  $script[] = "  swfobject.embedSWF('$url', '$div_id', '". $params['width'] ."', '". $params['height'] ."', '".  $params['version'] ."', '". $params['express_redirect'] ."', flashvars, params, attributes );";
+    
+  // build the complete output
+  $html[] = ' $(document).ready(function () {';
+  $html[] = implode("\n", $script);
+  $html[] = '}); ';
+  $html[] = "--></script>\n";
+
+  // increment the id count
+  $id_count ++;
+  
+  return implode("\n", $html);
+}

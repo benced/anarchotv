@@ -1,0 +1,14 @@
+; $Id: file_import.info,v 1.1 2008/02/15 01:02:27 neochief Exp $
+name = File Import
+description = Allows batches of files to be imported from a directory on the server.
+dependencies = upload
+package = Other
+version = "5.x-1.0"
+project = "file_import"
+
+
+; Information added by drupal.org packaging script on 2008-02-15
+version = "5.x-1.0"
+project = "file_import"
+datestamp = "1203088207"
+

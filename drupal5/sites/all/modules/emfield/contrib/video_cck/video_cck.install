@@ -1,0 +1,116 @@
+<?php
+// $Id: video_cck.install,v 1.5 2008/02/17 19:07:51 aaron Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function video_cck_install() {
+}
+
+/**
+ *  we need to make sure to show our new 'embed code' filter on views
+ */
+function video_cck_update_1() {
+  return _video_cck_update_reset_cache();
+}
+
+/**
+ *  we need a new data field for extra info stored by certain providers, such as blip.tv
+ */
+function video_cck_update_2() {
+  $ret = array();
+
+  include_once('./'. drupal_get_path('module', 'content') .'/content.module');
+  include_once('./'. drupal_get_path('module', 'content') .'/content_admin.inc');
+
+  content_clear_type_cache();
+  $fields = content_fields();
+
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'video_cck':
+        $columns = array(
+          'data' => array('type' => 'longtext', 'not null' => TRUE, 'default' => "''", 'sortable' => false),
+        );
+        // the following line will trigger (negligible) warnings if video_cck_update_2 was run before
+        // (column already exists)
+        @content_alter_db_field(array(), array(), $field, $columns);
+      break;
+    }
+  }
+  $ret = _video_cck_update_reset_cache();
+  $ret[] = update_sql("DELETE FROM {cache}");
+  return $ret;
+}
+
+function _video_cck_update_reset_cache() {
+  $ret = _video_cck_update_reset_cache_views();
+  $ret[] = update_sql("DELETE FROM {cache_content}");
+  return $ret;
+}
+
+/**
+ *  since we made our engine dependent on emfield, we need to change some variables accordingly
+ */
+function video_cck_update_3() {
+  $ret = array();
+  foreach (emfield_system_list('video_cck') as $provider) {
+    // TODO: this will need some attention when we upgrade to d6
+    $test = variable_get('video_cck_allow_' . $provider->name, NULL);
+    if (isset($test)) {
+      variable_set('emfield_' . $module . '_allow_' . $provider->name, variable_get('video_cck_allow_' . $provider->name, true));
+    }
+  }
+  $ret[] = array(
+    'query' => t('The Embedded Video Field allowed provider variables have been updated.'),
+    'success' => TRUE
+  );
+  $ret = array_merge($ret, _video_cck_update_reset_cache());
+
+  // now we need to depend on emfield's menu. remove our old admin menu path
+  menu_rebuild();
+  return $ret;
+}
+
+/**
+ *  oops. cleanup from update 3 -- we don't want to accidentally reset our variables
+ *  if we have to run update 3 again...
+ */
+function video_cck_update_4() {
+  $ret = array();
+  foreach (emfield_system_list('video_cck') as $provider) {
+    // TODO: this will need some attention when we upgrade to d6
+    $test = variable_get('video_cck_allow_' . $provider->name, NULL);
+    if (isset($test)) {
+      variable_set('video_cck_allow_' . $provider->name, NULL);
+    }
+  }
+  $ret[] = array(
+    'query' => t('The old Embedded Video Field allowed provider variables have been cleaned up.'),
+    'success' => TRUE
+  );
+  return $ret;
+}
+
+/**
+ *  changed the data structure for blip.tv
+ *  TODO: this doesn't work. thought data was cached? ...
+ */
+function video_cck_update_5() {
+  $ret = _video_cck_update_reset_cache();
+  $ret[] = update_sql("DELETE FROM {cache}");
+  return $ret;
+}
+
+function video_cck_update_6() {
+  $ret = _video_cck_update_reset_cache_views();
+  return $ret;
+}
+
+// I'd like this to be conditional, so it only runs if they don't have views installed.
+// however, module_exists doesn't actually work in the update scripts.
+function _video_cck_update_reset_cache_views() {
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM {cache_views}");
+  return $ret;
+}

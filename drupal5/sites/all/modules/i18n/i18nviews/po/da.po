@@ -1,0 +1,60 @@
+# Danish translation of Drupal (i18nviews.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (i18nviews.module) $Id: da.po,v 1.1.2.1 2007/09/12 07:44:08 wulff Exp $\n"
+"POT-Creation-Date: 2007-09-12 09:23+0200\n"
+"PO-Revision-Date: 2007-09-12 09:43+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: i18nviews.module:30;35
+msgid "Internationalization: Language"
+msgstr "Internationalisering: Sprog"
+
+#: i18nviews.module:40
+msgid "Enabled languages for content."
+msgstr "Aktiverede indholdssprog."
+
+#: i18nviews.module:44
+msgid "Internationalization: Language (extended)"
+msgstr "Internationalisering: Sprog (udvidet)"
+
+#: i18nviews.module:49
+msgid "All defined languages for content."
+msgstr "Alle definerede indholdssprog."
+
+#: i18nviews.module:52
+msgid "Internationalization: Selection"
+msgstr "Internationalisering: Valg"
+
+#: i18nviews.module:55
+msgid "Is"
+msgstr "er"
+
+#: i18nviews.module:57
+msgid "Content language."
+msgstr "Indholdssprog"
+
+#: i18nviews.module:0
+msgid "i18nviews"
+msgstr "i18nviews"
+
+#: i18nviews.info:0
+msgid "i18n - views"
+msgstr "i18n - views"
+
+#: i18nviews.info:0
+msgid "Views support for i18n"
+msgstr "Understøttelse af visninger for i18n."
+
+#: i18nviews.info:0
+msgid "Multilanguage - i18n"
+msgstr "Flere sprog - i18n"
+

@@ -1,0 +1,10 @@
+; $Id: ffmpeg_wrapper.info,v 1.1 2008/03/16 07:04:36 arthuregg Exp $
+name = FFmpeg Wrapper
+description = This is a helper module for modules which wish to implement FFmpeg functions
+package = "Other"
+
+; Information added by drupal.org packaging script on 2009-01-02
+version = "5.x-1.1-beta1"
+project = "ffmpeg_wrapper"
+datestamp = "1230930033"
+

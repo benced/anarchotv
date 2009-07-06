@@ -1,0 +1,10 @@
+; $Id: asset_lightbox.info,v 1.1.2.1 2008/09/02 13:41:07 wmostrey Exp $
+name = Asset Lightbox2
+description = Lightbox2 support for the asset module.
+package = Asset
+dependencies = asset lightbox2 imagecache
+; Information added by drupal.org packaging script on 2008-09-09
+version = "5.x-1.0-rc2"
+project = "asset"
+datestamp = "1220995502"
+

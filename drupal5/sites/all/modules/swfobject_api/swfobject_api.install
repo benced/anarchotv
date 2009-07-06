@@ -1,0 +1,14 @@
+<?php
+
+// $Id: swfobject_api.install,v 1.1.2.1 2007/08/14 01:55:46 arthuregg Exp $
+
+// swfobject.install
+
+function swfobject_api_install() {
+
+ // alert the user that they need to download the js file
+ if (!(file_exists(drupal_get_path('module','swfobject_api') . "/swfobject.js"))) {
+    drupal_set_message(t("You need to download the swfobject.js file from ". l('http://blog.deconcept.com/swfobject/', 'http://blog.deconcept.com/swfobject/') . " and place it in the swfobject module directory. Please see the README.txt"), 'error');
+ }
+
+}

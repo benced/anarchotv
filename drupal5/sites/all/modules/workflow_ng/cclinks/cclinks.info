@@ -1,0 +1,10 @@
+1; $Id: cclinks.info,v 1.1.2.1 2007/09/13 10:44:06 fago Exp $
+name = Configurable Content Links
+description = Provides content links, that generate events when they are pressed.
+package = Workflow-ng
+dependencies = states workflow_ng
+; Information added by drupal.org packaging script on 2008-05-14
+version = "5.x-2.1"
+project = "workflow_ng"
+datestamp = "1210778117"
+

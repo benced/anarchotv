@@ -1,0 +1,13 @@
+; $Id: i18ncontent.info,v 1.1.2.2 2007/06/18 23:06:46 dww Exp $
+name = i18n - content types
+description = Translates content type parameters.
+dependencies = i18n i18nstrings
+package = Multilanguage - i18n - experimental
+
+
+
+; Information added by drupal.org packaging script on 2009-01-14
+version = "5.x-2.5"
+project = "i18n"
+datestamp = "1231976422"
+

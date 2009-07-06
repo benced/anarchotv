@@ -1,0 +1,354 @@
+<?php
+/* $Id: asset_youtube.module,v 1.1.2.4 2008/01/29 20:49:47 wmostrey Exp $ */
+
+function asset_youtube_extract_id($text) {
+  $matches = array();
+  // first try to match the embed tag
+  preg_match('/param[^>]*value=\"http:\/\/www.youtube.com\/v\/([^\"]*)\"/', $text, $matches);
+  
+  // then the URL
+  if (!isset($matches[1])) {
+    // http://youtube.com/watch?v=9193duFdUec
+    preg_match('/http:\/\/www.youtube.com\/watch\?v=(.*)^\"/', $text, $matches);
+  }    
+  return (isset($matches[1]) ? $matches[1] : false);
+}
+
+function asset_youtube_asset_settings() {
+  $form['asset_youtube_dev_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('YouTube Developer ID'),
+    '#description' => '<a href="http://www.youtube.com/my_profile_dev">Get your YouTube Developer Id here.</a>',
+    '#default_value' => variable_get('asset_youtube_dev_id', ''),
+  );
+  return system_settings_form($form);
+}
+
+function asset_youtube_asset_type($op = 'info', $delta=0, $form_values=array()) {
+  switch ($op) {
+    case 'info':
+      return array(
+        'embed' => array(
+          'value' => t('YouTube Embed'),
+          'title' => t('Use an existing YouTube video.'),
+          'src' => drupal_get_path('module', 'asset_youtube') .'/red_y.gif',
+        ),
+        'sync' => array(
+          'value' => t('YouTube Sync'),
+          'title' => t('Sync up with your YouTube Account.'),
+          'src' => drupal_get_path('module', 'asset_youtube') .'/red_y.gif',
+        ),
+      );
+    case 'form':
+      switch ($delta) {
+        case 'embed': 
+          $form['parent'] = array(
+            '#type' => 'hidden',
+            '#value' => $form_values['parent'] ? $form_values['parent'] : $_GET['dir'],
+          );
+          $form[] = array(
+            '#type' => 'item',
+            '#title' => 'Directory',
+            '#value' => str_replace(file_directory_path(), 'assets', $form['parent']['#value']),
+            '#prefix' => '<div class="container-inline">',
+            '#suffix' => '</div>',
+          );
+          $form['embed'] = array(
+            '#type' => 'textarea',
+            '#title' => t('YouTube Embed Code'),
+            '#rows' => 3,
+          );
+          $form['title'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Title'),
+          );
+          $form['author'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Author'),
+          );
+          $form['description'] = array(
+            '#type' => 'textarea',
+            '#title' => t('Description'),
+            '#rows' => 3,
+          );
+          $form['status'] = array(
+            '#type' => 'radios',
+            '#title' => t('Status'),
+            '#required' => true,
+            '#default_value' => ASSET_PUBLIC,
+            '#options' => array(
+              ASSET_PRIVATE => t('Private'),
+              ASSET_PUBLIC => t('Public'),
+            ),
+          );
+          break;
+        case 'sync':
+          global $user;
+          if ($user->asset_youtube['username']) {
+            $form['help'] = array('#value' => '<p>Click next to import your YouTube Videos and Favorites.</p>');
+          }
+          else{
+            $form['help'] = array('#value' => '<p>Please provide you YouTube user name and click next to import your YouTube Videos and Favorites.</p>');
+            // match user edit form structure
+            $form['asset_youtube']['#tree'] = true;
+            $form['asset_youtube']['username'] = array(
+              '#type' => 'textfield',
+              '#title' => t('YouTube user name'),
+            );
+          }
+          break;
+      }
+      return $form;
+    case 'validate':
+      // return a valid asset aid
+      switch ($delta) {
+        case 'embed':
+          if ($ytid = asset_youtube_extract_id($form_values['embed'])) {
+            $path = $form_values['parent'] .'/'. $ytid .'.youtube';
+            $asset->filepath = $path;
+            $asset->status = $form_values['status']; 
+            $asset->title = $form_values['title'];
+            $asset->author = $form_values['author'];
+            $asset->description = $form_values['description'];
+            $asset->type = 'youtube';
+            $asset = asset_save($asset);
+            return $asset->aid;
+          }
+          else{
+            form_set_error('embed', 'Error extracting YouTube video ID.</em>');
+          }
+          break;
+        case 'sync':
+          global $user;
+          if ($form_values['asset_youtube']['username']) {
+            asset_youtube_user('update', $form_values, $user);
+            $user = user_load(array('uid' => $user->uid));
+          }
+          asset_youtube_sync();
+          $query = $_GET;
+          unset($query['q']);
+          $query['dir'] = $user->name .'/My YouTube';
+          drupal_goto($_GET['q'], asset_build_query($query));
+          break;
+      }
+      break;
+    case 'submit':
+      // must return a valid asset aid
+      switch ($delta) {
+      }
+      break;
+  }
+      
+}
+
+function asset_youtube_asset_formatter($op='info', $asset=null, $attr=array()) {
+  switch ($op) {          
+    case 'info':
+      $formats['video'] = array(
+        'name' => 'YouTube Video',
+        'types' => array('youtube' => array('*')),
+        'description' => t('Embed the YouTube video.'),
+      );
+      $formats['thumbnail'] = array(
+        'name' => 'YouTube Thumbnail Image',
+        'types' => array('youtube' => array('*')),
+        'description' => t('Display a thumbnail preview image of the YouTube video.'),
+      );
+      return $formats;
+    case 'init':
+      break;      
+    case 'options':
+      switch ($attr['format']) {
+        case 'thumbnail':
+          break;
+        case 'video':
+          $form['height'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Height'),
+            '#size' => '10',
+            '#default_value' => 325,            
+          );
+          $form['width'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Width'),
+            '#size' => '10',
+            '#default_value' => 450,            
+          );
+        break;
+      }
+      return $form;
+    case 'preview':
+      return theme('asset_youtube_thumbnail', $asset);
+    case 'img' :
+      $id = str_replace('.youtube', '', $asset->filename);
+      $url = "http://img.youtube.com/vi/$id/2.jpg";
+      return $url;
+      break;
+    case 'details':
+      break;
+    case 'render':
+      switch ($attr['format']) {
+        case 'thumbnail':
+          return theme('asset_youtube_thumbnail', $asset);
+          break;
+        case 'video':
+        default:
+          return theme('asset_youtube_video', $asset, $attr);
+          break;
+      }      
+      break;
+  }
+}
+
+function asset_youtube_assetapi($op='list', $asset=null) {
+  switch ($op) {
+    case 'load':
+      if ($asset->extension == 'youtube') {
+        $fields['url'] = 'http://youtube.com/watch?v='. str_replace('.youtube', '', $asset->filename);
+      }
+      return $fields;
+  }
+}
+
+function theme_asset_youtube_thumbnail($asset) {
+  $id = str_replace('.youtube', '', $asset->filename);
+  $url = "http://img.youtube.com/vi/$id/2.jpg";
+  $alt = $title = $asset->title;
+  $img = '<img src="'. check_url($url) .'" alt="'. check_plain($alt) .'" title="'. check_plain($title) .'" />';      
+  return $img;
+}
+
+function theme_asset_youtube_video($asset, $attr = array()) {
+  $id = str_replace('.youtube', '', $asset->filename);
+  
+  return '<object width="'. $attr['width'] .'" height="'. $attr['height'] .'">'
+       .'<param name="movie" value="http://www.youtube.com/v/'. $id .'"></param>'
+       .'<param name="wmode" value="transparent"></param>'
+       .'<embed src="http://www.youtube.com/v/'. $id .'" type="application/x-shockwave-flash" '
+       .'wmode="transparent" width="'. $attr['width'] .'" height="'. $attr['height'] .'">'
+       .'</embed></object>';
+}
+
+function asset_youtube_sync() {
+  global $user;
+  $videos = $favorites = 0;
+  
+  if (!$user->asset_youtube['username']) {
+    drupal_set_message('You must first enter your youtube user name.');
+    return;
+  }
+
+  asset_check_directory($user->name, FILE_CREATE_DIRECTORY);
+  $yt_dir = $user->name .'/My YouTube';
+  asset_check_directory($yt_dir, FILE_CREATE_DIRECTORY);
+  
+  // Get user's videos
+  $result = asset_youtube_call('youtube.videos.list_by_user');
+  if (is_array($result->document->video_list[0]->video)) {
+    $dir = $yt_dir .'/My Videos';
+    if (asset_check_directory($dir, FILE_CREATE_DIRECTORY)) {
+      foreach ($result->document->video_list[0]->video as $video) {
+        asset_youtube_save_asset($video, $dir);
+        $videos++;
+      }
+    }
+    else {
+      drupal_set_message('Error creating <em>My YouTube Videos</em> folder.', 'error');
+    }
+  }
+  
+  // Get user's favorites
+  $result = asset_youtube_call('youtube.users.list_favorite_videos');
+  if (is_array($result->document->video_list[0]->video)) {
+    $dir = $yt_dir .'/My Favorites';
+    if (asset_check_directory($dir, FILE_CREATE_DIRECTORY)) {
+      foreach ($result->document->video_list[0]->video as $video) {
+        asset_youtube_save_asset($video, $dir);
+        $favorites++;
+      }
+    }
+    else{
+      drupal_set_message('Error creating <em>My YouTube Videos</em> folder.', 'error');
+    }
+  }
+
+  return "saved $videos videos and $favorites favorites";
+}
+
+function asset_youtube_save_asset($video, $dir) {
+  $filename = $video->id[0]->tagData .'.youtube';
+  $asset = asset_load(array('dirname' => $dir, 'filename' => $filename));
+  if (!$asset) {
+    $asset = new stdClass();
+    $asset->filepath = $dir .'/'. $filename;
+    $asset->filesize = 0;
+    $asset->title = $video->title[0]->tagData;
+    $asset->description = $video->description[0]->tagData;
+    $asset->author = $video->author[0]->tagData;
+    $asset->type = 'youtube';
+    asset_save($asset);
+  }  
+}
+
+function asset_youtube_call($method, $params=array()) {
+  global $user;
+  $dev_id = variable_get('asset_youtube_dev_id', '');
+  $yt_user = $user->asset_youtube['username'];
+  $url = 'http://www.youtube.com/api2_xmlrpc';
+  $default_params = array(
+    'dev_id' => $dev_id,
+    'user' => $yt_user,
+  );
+  $params = array_merge($default_params, $params);
+  $xml = xmlrpc($url, $method, $params);
+  require_once(drupal_get_path('module', 'asset_youtube') .'/xmlparser.class.php');
+  $response = new XMLParser($xml);
+  $response->Parse();
+  return $response;
+}
+
+function asset_youtube_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'categories':
+      return array(array('name' => 'asset', 'title' => t('Asset'), 'weight' => 1));
+      break;
+    case 'form':
+      if ($category == 'asset') {
+        $form['asset_youtube'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('YouTube Settings'),
+          '#tree' => true
+        );
+        $form['asset_youtube']['username'] = array(
+          '#type' => 'textfield',
+          '#title' => t('YouTube User Name'),
+          '#default_value' => $account->asset_youtube['username'],
+        );
+      }
+      return $form;
+    case 'update':
+      if ($edit['asset_youtube']['username']) {
+        if (db_result(db_query("SELECT COUNT(*) FROM {asset_youtube_user} WHERE uid=%d", $account->uid))) {
+          db_query("UPDATE {asset_youtube_user} SET username='%s' WHERE uid=%d", $edit['asset_youtube']['username'], $account->uid);
+          break;
+        }
+      }
+      else {
+        break;
+      }
+      // fall through
+    case 'insert':
+      if ($edit['asset_youtube']['username']) {
+        db_query("INSERT INTO {asset_youtube_user} (uid, username) VALUES (%d, '%s')", $account->uid, $edit['asset_youtube']['username']);
+      }
+      break;
+    case 'delete':
+      db_query('DELETE FROM {asset_youtube_user} WHERE uid = %d', $account->uid);
+      break;
+    case 'load':
+      $account->asset_youtube = db_fetch_array(db_query('SELECT username FROM {asset_youtube_user} WHERE uid=%d', $account->uid));
+      break;  
+            
+  }
+  
+}

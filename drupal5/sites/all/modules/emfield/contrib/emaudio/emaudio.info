@@ -1,0 +1,11 @@
+; $Id: emaudio.info,v 1.1 2008/01/08 21:23:17 aaron Exp $
+name = Embedded Audio Field
+description = Defines a field type for displaying third party music, podcasts, and other audio, such as podOmatic and Odeo.
+dependencies = emfield
+package = CCK
+
+; Information added by drupal.org packaging script on 2008-05-11
+version = "5.x-1.2"
+project = "emfield"
+datestamp = "1210538707"
+

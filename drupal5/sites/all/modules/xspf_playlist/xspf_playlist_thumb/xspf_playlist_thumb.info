@@ -1,0 +1,11 @@
+; $Id: xspf_playlist_thumb.info,v 1.1.2.3 2008/07/04 21:23:47 nedjo Exp $
+name = "XSPF Playlist Thumbnails"
+description = "Manages thumbnails for XSPF playlists."
+package = "Media"
+dependencies = xspf_playlist
+
+; Information added by drupal.org packaging script on 2009-01-02
+version = "5.x-1.20-beta1"
+project = "xspf_playlist"
+datestamp = "1230936040"
+

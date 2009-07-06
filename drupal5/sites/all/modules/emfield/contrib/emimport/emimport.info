@@ -1,0 +1,11 @@
+; $Id: emimport.info,v 1.1 2007/10/08 15:45:55 aaron Exp $
+name = Embedded Media Import
+description = Imports media from certain third providers, such as FlickR.
+dependencies = emfield
+package = CCK
+
+; Information added by drupal.org packaging script on 2008-05-11
+version = "5.x-1.2"
+project = "emfield"
+datestamp = "1210538707"
+

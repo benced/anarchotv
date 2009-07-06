@@ -1,0 +1,12 @@
+<?php
+// $Id: mimedetect.install,v 1.1 2008/01/05 05:04:09 dopry Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function mimedetect_install() {
+}
+
+function mimedetect_uninstall() {
+}
+

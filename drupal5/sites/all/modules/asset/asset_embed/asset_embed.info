@@ -1,0 +1,12 @@
+; $Id: asset_embed.info,v 1.1.2.1 2008/07/24 10:44:16 wmostrey Exp $
+name = Asset Embed
+description = "Generic asset handler for &lt;embed&gt;-ed content."
+package = Asset
+dependencies = asset
+version = "$Name: DRUPAL-5--1-0-RC2 $"
+
+; Information added by drupal.org packaging script on 2008-09-09
+version = "5.x-1.0-rc2"
+project = "asset"
+datestamp = "1220995502"
+

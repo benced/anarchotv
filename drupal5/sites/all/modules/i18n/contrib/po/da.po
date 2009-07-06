@@ -1,0 +1,77 @@
+# Danish translation of Drupal (i18n contrib)
+# Copyright 2006-2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (i18n contrib) $Id$\n"
+"POT-Creation-Date: 2006-10-04 12:02+0200\n"
+"PO-Revision-Date: 2007-09-12 09:48+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: i18nmenu.module:43
+msgid ""
+"\n"
+"        <p>This module provides support for translatable custom menu items:</p>\n"
+"        <ul>\n"
+"        <li>Create menus as usual, with names in English. If the menu is already created, no changes are needeed</li>\n"
+"        <li>Show the menu in some block</li>\n"
+"        <li>Switch language to some non english one -while viewing the block-, so the <i>locales</i> table is populated with the new strings</li>\n"
+"        <li>Use the localization system to translate menu item strings</li>\n"
+"        </ul>"
+msgstr ""
+"\n"
+"        <p>Dette modul giver mulighed for at oversætte menupunkter:</p>\n"
+"        <ul>\n"
+"        <li>Opret menuer som sædvanligt, med navne på Dansk. Hvis menuen allerede findes skal der ikke ændres noget</li>\n"
+"        <li>Vis menuen i en blok</li>\n"
+"        <li>Skift til et andet sprog end dansk mens blokken vises, så de nye strenge tilføjes til <em>locales</em>-tabellen</li>\n"
+"        <li>Brug lokaliseringssystemet til at oversætte menupunkterne</li>\n"
+"        </ul>"
+
+#: i18nmenu.module:0
+msgid "i18nmenu"
+msgstr "i18nmenu"
+
+#: i18ntaxonomy.module:25
+msgid "Vocabulary Translation"
+msgstr "Oversættelse af ordforråd"
+
+#: i18ntaxonomy.module:28
+msgid "Vocabularies to translate through localization system"
+msgstr "Ordforråd der oversættes af lokaliseringssytemet"
+
+#: i18ntaxonomy.module:187
+msgid "none"
+msgstr "ingen"
+
+#: i18ntaxonomy.module:0
+msgid "i18ntaxonomy"
+msgstr "i18ntaxonomy"
+
+#: i18nmenu.info:0
+msgid "i18n - menu"
+msgstr "i18n - menu"
+
+#: i18nmenu.info:0
+msgid "Supports translatable custom menu items."
+msgstr "Understøtter oversættelse af menupunkter."
+
+#: i18nmenu.info:0
+#: i18ntaxonomy.info:0
+msgid "Multilanguage - i18n"
+msgstr "Flere sprog - i18n"
+
+#: i18ntaxonomy.info:0
+msgid "i18n - taxonomy"
+msgstr "i18n - taxonomy"
+
+#: i18ntaxonomy.info:0
+msgid "Translates taxonomy terms using localization system."
+msgstr "Oversætter taksonomi-termer via lokaliseringssystemet."
+

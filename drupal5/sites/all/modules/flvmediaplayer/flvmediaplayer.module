@@ -1,0 +1,805 @@
+<?php
+
+// $Id: flvmediaplayer.module,v 1.14.2.52.2.33 2008/12/19 23:45:42 arthuregg Exp $
+
+/* ******************************************************* */
+/* INCLUDE FILES */
+/* ******************************************************* */
+
+// get the IO functions
+require_once('flvmediaplayer_io.inc');
+// get the profile functions
+require_once('flvmediaplayer_profiles.inc');
+// get the configuration wizard functions
+require_once('flvmediaplayer_wizard.inc');
+
+
+/* ******************************************************* */
+/* DRUPAL FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * Implementation of hook_menu().
+ *
+ * @param boolean $may_cache
+ * @return array
+ */
+function flvmediaplayer_menu($may_cache) {
+  require_once('flvmediaplayer_menu.inc');
+  return flvmediaplayer_menu_inc($may_cache);
+}
+
+
+/**
+ * Menu callback for administrative settings form. An install
+ * state variable is used to present the user with different options
+ * as they go through the process of configuring the player.
+ * @return array
+ *   drupal form array
+ */
+function flvmediaplayer_admin_settings() {
+
+  // get the current configuration state
+  $state = variable_get('flvmediaplayer_configuration_state', 0);
+  // if the configuration state is not set, display the helper form
+  if ($state < 4) {
+    return flvmediaplayer_admin_settings_wizard_form_step_0();
+  }
+
+  global $base_path;
+  $form = array();
+  $form['settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Settings'),
+    '#collapsible' => true,
+  );
+
+  // define default player and profiles per content type
+  $form['settings']['flvmediaplayer_player'] = array(
+    '#title' => t('Default player'),
+    '#type' => 'select',
+    '#options' => flvmediaplayer_player_list(),
+    '#default_value' => variable_get('flvmediaplayer_player', 'jw_player_4.x.inc'),
+    '#description' => t('Select the player you have installed. Note: changing this option does NOT change the data- you will need to update your profiles to the new player\'s configuration.'),
+  );
+
+  $form['settings']['flvmediaplayer_path' ] = array(
+    '#title' => t('Path to flash player'),
+    '#type' => 'textfield',
+    '#default_value' => variable_get('flvmediaplayer_path', $base_path . drupal_get_path('module', 'flvmediaplayer') .'/mediaplayer.swf'),
+    '#description' => t('URL to your flash player: /path/@file
+      Generally you want to put the @file into this module directory.
+      If you use http:// the path will always use that domain which can cause problems.
+      If you use /path/@file flvmediaplayer will attach the current domain to the player.', array('@file' => 'mediaplayer.swf')),
+  );
+
+  // get a listing of all the content types
+  $types = _node_types_build();
+  $enabled_types = variable_get('flvmediaplayer_types', array());
+  $form['settings']['flvmediaplayer_types'] = array(
+    '#type' => 'select',
+    '#multiple' => true,
+    '#title' => t('Player enabled'),
+    '#description' => t('Choose which content types you want to be able to use video players on.'),
+    '#options' => $types[1],
+    '#default_value' => $enabled_types,
+  );
+
+  // do we have profiles to assign to content types?
+  if ($profiles =  flvmediaplayer_profile_get_configs() ) {
+    if ($enabled_types) {
+      foreach ($enabled_types as $name => $value) {
+        if ($value) {
+          // create content type field set
+          $form['content']['thetype_'. $value] = array(
+            '#type' => 'fieldset',
+            '#title' => t('Content: %type settings', array('%type' => $types[1][$value])),
+          );
+
+          // select profile to use
+          $form['content']['thetype_'. $value]['flvmp_'. $value .'_profile'] = array(
+            '#type' => 'select',
+            '#options' => $profiles,
+            '#default_value' => variable_get('flvmp_'. $value .'_profile', false),
+            '#title' => t('Select profile'),
+            '#description' => t('You can select a profile to use with this node type.'),
+          );
+
+          // allow over ride
+          $form['content']['thetype_'. $value]['flvmp_'. $value .'_override'] = array(
+            '#title' => t('Allow settings override'),
+            '#type' => 'checkbox',
+            '#default_value' => variable_get('flvmp_'. $value .'_override', false),
+            '#description' => t('Allow authors of a node to override these settings on an individual node.'),
+          );
+
+        }
+      }
+    }
+  }
+  // profiles in the system
+  else {
+    drupal_set_message(t('Please create a profile to use'));
+  }
+
+  return system_settings_form($form);
+}
+
+
+/**
+ * implementation of hook_perm
+ */
+function flvmediaplayer_perm() {
+  return array('administer flvmediaplayer');
+}
+
+
+/**
+ * implementation of hook_nodeapi
+ * render a flash player on this node type
+ */
+function flvmediaplayer_nodeapi(&$node, $op, $a3, $a4) {
+
+  switch ($op) {
+    // add player to landing and teaser page
+    case 'view':
+      // get list of enabled types
+      $enabled_types = variable_get('flvmediaplayer_types', array());
+      // is this node type enabled to have players displayed on it?
+      if ($enabled_types[$node->type]) {
+        // get the configuration values for this node
+        if ($node->flvmediaplayer_config = flvmediaplayer_configuration_values($node)) {
+          // add player to body and or teaser if requested
+          if ($node->flvmediaplayer_config['player_node_body'] || ($a3 && $node->flvmediaplayer_config['embed_teaser'] )) {
+            flvmediaplayer_insert_player($node, theme('flvmediaplayer_display', $node));
+          }
+        }
+      }
+      break;
+
+    // Save any registered flvmediaplayer data.
+    case 'update':
+      // only update if the profile in use allows node overrides
+      if (variable_get('flvmp_'. $node->type .'_override', false) && $node->flvmp_node_override) {
+        $flv_options = array();
+        // Collect from data off the node. All flvmp values have prefix 'flvmp_'
+        foreach ($node as $key => $value) {
+          // build the array of flvmp values
+          if (strstr($key, 'flvmp_')){
+            // save the key without the prefix
+            $flv_options[str_replace('flvmp_', '', $key)] = $value;
+          }
+        }
+        // set an override value
+        $flv_options['node_override'] = true;
+
+        db_query('DELETE FROM {flvmediaplayer_node} WHERE nid = %d', $node->nid);
+        db_query('INSERT INTO {flvmediaplayer_node} (nid, config) VALUES (%d, "%s")', $node->nid, serialize($flv_options));
+        // clear any cached data
+        cache_clear_all('flvmp_%'. $node->nid, 'cache_flvmediaplayer', true);
+      }
+      // if node over ride has not been set, delete the entry for this node
+      elseif (variable_get('flvmp_'. $node->type .'_override', false) && ! $node->flvmp_node_override) {
+        db_query('DELETE FROM {flvmediaplayer_node} WHERE nid = %d', $node->nid);
+      }
+
+    break;
+
+    case 'delete':
+      db_query('DELETE FROM {flvmediaplayer_node} WHERE nid = %d', $node->nid);
+    break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ * Alter the node edit form to have the flvplayer settings if requested by the admin.
+ *
+ * @param string $form_id
+ * @param array $form
+ */
+function flvmediaplayer_form_alter($form_id, &$form) {
+  if (isset($form['#node']) && $form_id == $form['#node']->type. '_node_form' && variable_get('flvmp_'. $form['#node']->type .'_override', false)) {
+    // get the configuration for this node
+    $config = flvmediaplayer_configuration_values($form['#node']);
+
+    $form['flvmediaplayer'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Flash player settings'),
+      '#collapsible' => true,
+      '#collapsed' =>  $config['node_override'] ? false : true,
+      '#description' => t('You can override any of the basic settings for this player here.'),
+    );
+
+    // display in body of the node
+    $form['flvmediaplayer']['flvmp_node_override'] = array(
+      '#title' => t('Allow settings override'),
+      '#type' => 'checkbox',
+      '#default_value' => $config['node_override'] ? 1 : 0,
+      '#description' => t('Use these override settings on this node. If you un-check this, your customized settings will be lost.'),
+    );
+    // get the FLV player form
+    $form['flvmediaplayer'][] = flvmdiaplayer_get_player_form($config);
+  }
+}
+
+
+/* ******************************************************* */
+/* FLV EXTERNAL CONFIGURATION FUNCTIONS */
+/* ******************************************************* */
+
+
+/**
+ * builds the configuration page that can be called remotely
+ * @param string $type is a type to load
+ * @param int $id is a flv id
+ * @param string $profile
+ *   name of the profile to use
+ * @param string $embed
+ *   use embed data
+ * @return string
+ */
+function flvmediaplayer_config_xml_page($type, $id, $profile = null) {
+  // $id has to be numeric for nodes
+  if (is_numeric($id)) {
+    // data load
+    switch ($type) {
+      case 'node':
+        // load the node
+        $node = node_load($id);
+        // get the flash player data
+        $data = flvmediaplayer_node_data($node, $profile, array(), false, true);
+      break;
+    }
+
+    // no data, just exit, do not cache
+    if (! $data) {
+      module_invoke_all('exit');
+      exit;
+    }
+  }
+  // set headers
+  drupal_set_header('Content-Type: text/xml; charset=utf-8');
+  // display as XML
+  print flvmediaplayer_config_xml($data['flashvars']);
+  module_invoke_all('exit');
+  exit;
+}
+
+/**
+ * builds a config file xml output
+ * @param array $flashvars is an array of flashvars
+ * @return string xml
+ */
+function flvmediaplayer_config_xml($flashvars) {
+  if (count($flashvars)) {
+    return "<config>\n". format_xml_elements($flashvars) ."</config>";
+  }
+}
+
+
+/* ******************************************************* */
+/* FLV Media Player INTERNAL FUNCTIONS */
+/* ******************************************************* */
+
+
+/**
+ * builds a list of the player configuration files that are installed
+ *
+ * @return array
+ */
+function flvmediaplayer_player_list() {
+  // check to see if we have a configuration for this
+  $path = drupal_get_path('module', 'flvmediaplayer') .'/players';
+  $players = file_scan_directory($path, '.*\.inc$');
+  if ($players) {
+    foreach ($players as $player) {
+      $player_list[$player->basename] = $player->basename;
+    }
+  }
+  return $player_list;
+}
+
+
+/**
+ * fetches the correct form when the player form is called
+ * use this to pull in the player form that is enabled
+ * @param array $config
+ * @return array
+ */
+function flvmdiaplayer_get_player_form($config) {
+  if (variable_get('flvmediaplayer_player', 'jw_player_4.x.inc')) {
+    $path = drupal_get_path('module', 'flvmediaplayer') .'/players/' . variable_get('flvmediaplayer_player', 'jw_player_4.x.inc');
+    // make sure this player exists
+    if (file_exists($path)) {
+      require_once($path);
+      return flvmediaplayer_player_form($config);
+    }
+  }
+  if (user_access('administer flvmediaplayer')) {
+    drupal_set_message(t('Please !select a player to use with FLV Media Player', array('!select a player' => l(t('select a player'), 'admin/settings/flvmediaplayer'))));
+  }
+}
+
+
+/**
+ * fires a module action
+ * @param $hook is the hook name
+ * @param $op is the operator to call
+ * @param $config_name is the name of the configuration action to call
+ * @param $config is an array of parameters
+ * @return array
+ */
+function flvmediaplayer_extend_fire($hook, $op, $config_name = NULL, $node = NULL, $config = NULL) {
+  // split the config_name data up
+  list($module_name, $separator, $name) = split('[--]', $config_name);
+  if (module_exists($module_name)) {
+    return module_invoke($module_name, $hook, $op, $name, $node, $config);
+  }
+}
+
+
+/**
+ * wrapper function for calling hooks in flvmediaplayer
+ *
+ * @param string $function
+ * @param string $op
+ * @return array
+ */
+function flvmediaplayer_extend($function, $op) {
+  $options = module_invoke_all($function, $op);
+  if (! empty($options)) {
+    return $options;
+  }
+}
+
+
+/**
+ * implementation of  hook_flvmediaplayer_file_use()
+ * @param string $op is which operator to call
+ * @param string $name is the active handler
+ * @param object $node is a drupal node object
+ * @param array $config is a configuration to run
+ */
+function flvmediaplayer_flvmediaplayer_file_use($op, $name = NULL, $node = NULL, $config = NULL) {
+  switch ($op) {
+    case 'define':
+      $items = array('flvmediaplayer--1' => t('Use file parameter'));
+      return $items;
+    break;
+    case 'url':
+      if ($config == 1) { return null;}
+    break;
+  }
+}
+
+
+/**
+ * builds all the params for displaying a player for a node
+ * @TODO there is lots of logic here that should be
+ * @param object $node
+ *   drupal node object
+ * @param array $params
+ *   array of data that can be used to override things
+ * @param string $profile
+ *   name of a profile to be used
+ * @param string $embed
+ *   is an embed calling back?
+ * @param boolean $external
+ *   controls how the data is handed back
+ * @return array of flash player data
+ */
+function flvmediaplayer_build_player_data($node, $profile = null, $params = array(), $embed = false, $config_page = null) {
+  // build a config to use. This handles overrides by nodes, profiles, and params
+  if (! $config = flvmediaplayer_configuration_values($node, $profile, $params) ) {
+    return;
+  }
+
+  // allow the file value to set the output if present in $params
+  // look for the file on the params. Do this first to exit if there
+  // is no file
+  if (! $flashvars['file'] = $params['file']) {
+    // now look to see if the configuration has set the file location
+    if (! $flashvars['file'] = $config['file_location'])  {
+      // fire the extend hook to get the file
+      if (! $flashvars['file'] = flvmediaplayer_extend_fire('flvmediaplayer_file_use', 'file', $config['file_location_hook'], $node, $config)) {
+        return;
+      }
+    }
+  }
+
+  // build the base parms
+  $params['width'] = $config['player_width'];
+  $params['height'] = $config['player_height'];
+  $params['allowfullscreen'] = $config['playback_fullscreen'] ? 'true' : 'false';
+  $params['allowscriptaccess'] = $config['playback_allowscriptaccess'] ? 'always' : 'false';
+
+  // set the path to the player, let configuration override default settings
+  $player_path = $config['player_path'] ? $config['player_path'] : variable_get('flvmediaplayer_path', drupal_get_path('module', 'flvmediaplayer') .'/mediaplayer.swf');
+  // check the url and make sure it has an http:// on it
+  $player_path = flvmediaplayer_url($player_path);
+
+  // should we return flashvars, or just a path to the config file?
+  // if the request is for a $config_page then we hand back everything
+  // we also want to check to see if this is an embed requesting configuration data as well
+  if (! $config_page && ($config['external_config'] || ($config['embed_external_config'] && $embed))) {
+  	// determine which profile should be used to display
+    if ($config['embed_profile'] && $embed) { $display_profile = $config['embed_profile']; }
+    else { $display_profile = '/'. $config['name']; }
+
+    // always pass a profile name to the config page
+    // @TODO this is somewhat problematic as we're assuming this is a node. clean this up!
+    $flashvars['config'] = flvmediaplayer_url('/node/' . $node->nid .'/flvmediaplayer'. $display_profile);
+    // unset the file path because we are using the configuration path
+    unset($flashvars['file']);
+    // return the limited data set
+    return array('player_path' => $player_path, 'flashvars' => $flashvars, 'params' => $params);
+  }
+
+  // -----------------------------------------------------
+  // build out all the flashvars.
+
+  // we have data and we need to display. Remove the options we have used so we can create
+  // an array of items which will be passed to the player
+  unset($config['pid'], $config['name'], $config['node_body'], $config['allowfullscreen'],
+    $config['allowscriptaccess'],  $config['external_config'], $config['file_location_hook'],
+    $config['player_width'], $config['player_height'], $config['player_path']);
+
+  // remove some variables for external display
+  // this could be done by the player override, but leaving it here for now
+  if ($config_page) {
+    unset($config['player_path'], $config['flash_noflash_text'], $config['flash_noflash_hook'], $config['embed_profile']);
+  }
+
+  // deal with no flash display. Start with user text
+  // then get the hook content. Remove data from array
+  // so we don't pollute the variable space
+  if ($config['noflash_text'] ) {
+    $flashvars['no_flash'] = $config['no_flash_text'];
+    unset($config['noflash_text']);
+  }
+  elseif ($config['noflash_hook'] != 'none') {
+  	$flashvars['no_flash'] = flvmediaplayer_extend_fire('flvmediaplayer_no_flash', 'view', $config['noflash_hook'], $node, $config);
+  }
+  unset($config['noflash_hook']);
+
+  // build additional flash var data
+  if ($vars = $config['flashvars']) {
+    $vars = explode("\n", $vars);
+    foreach($vars as $var) {
+      // split the config_name data up
+      list($var_name, $var_value, $seperator) = split('=', $var);
+      $config[$var_name] = str_replace("\r", '', $var_value);
+    }
+    unset($config['flashvars']);
+  }
+
+  // now go through the remaing items and add them on to the flashvars
+  foreach($config as $id => $value) {
+    // do not use arrays
+  	if ($value && ! is_array($value)) {
+      $flashvars[$id] = $value;
+  	}
+  }
+
+  // build the data and return it
+  return array('player_path' => $player_path, 'flashvars' => $flashvars, 'params' => $params);
+}
+
+
+/**
+ * this determins what data to build the configuration for a specified player from
+ * override by: parameters, requested profile, node data, default node type data
+ * @param array $node_configuration
+ *   data from $node->flvmediaplayer
+ * @param array $params
+ *   flvmediaplayer configuration attached to a node
+ * @param string $profile_name
+ *   name of a profile
+ * @param boolean $embed
+ *   is this an embed request?
+ * @return array
+ */
+function flvmediaplayer_configuration_values ($node = null, $profile_name = null, $params = array()) {
+  // check to see if this configuration allows override
+  if (variable_get('flvmp_'. $node->type .'_override', false)) {
+    // check to see if we have any data for this node
+    $config = unserialize(db_result(db_query('SELECT config FROM {flvmediaplayer_node} WHERE nid = %d', $node->nid)));
+  }
+  // If a profile was requested get the profile configuration data that was requested
+  // only if there was no node override data
+  if (! $config && $profile_name) {
+    // make sure that we have a profile name that was requested
+    if (! $config = flvmediaplayer_profile_get_config($profile_name)) {
+      watchdog('FLV Media Player', 'A profile was requested that does not exist.', WATCHDOG_ERROR);
+      return false;
+    }
+  }
+  // no data yet, get the default for this node type, if
+  // we do not find data, return
+  elseif (! $config) {
+    if (! $config = flvmediaplayer_profile_get_config(variable_get('flvmp_'. $node->type .'_profile', false))) {
+      return;
+    }
+  }
+
+  // If paramters are passed in, merge these with the set values
+  if (count($params)) {
+    $config = array_merge($config, $params);
+  }
+  // merge the values and return
+  return $config;
+}
+
+
+/**
+ * get node config data
+ * @param object $node
+ *   drupal node object
+ * @param string $profile
+ *   name of a profile to check against
+ * @param array $params
+ * @return array of config data
+ */
+function flvmediaplayer_node_data($node, $profile = null, $params = array(), $embed = null, $config_page = null) {
+  // if parameters are being passed in, create an identifier
+  if (is_array($params)) {
+    foreach ($params as $key => $value) {
+      $string .= "$key.$value.";
+    }
+    $params_id = '_'. md5($string);
+  }
+  // we need to account for urls in caching as well
+  $url = '_'. str_replace(array('http://','/'), '', flvmediaplayer_url());
+
+  // build the cache id
+  $cache_id = 'flvmp_'. $node->nid . ($profile ? '_'. $profile : null) . $url . ($config_page ? '_external' : null) . $params_id;
+  // get cached node data
+  $cache = cache_get($cache_id, 'cache_flvmediaplayer');
+  $cache = unserialize($cache->data);
+  // do we have cached data?
+  if (! $cache) {
+    // create a profile configuration data and cache
+    if ($cache = flvmediaplayer_build_player_data($node, $profile, $params, $embed, $config_page)) {
+      cache_set($cache_id, 'cache_flvmediaplayer', serialize($cache), CACHE_TEMPORARY);
+    }
+    // we do not have any data- do not cache
+    else {
+      return;
+    }
+  }
+  return $cache;
+}
+
+
+/**
+ * helper function to build the player embed string
+ * @param string $player_path
+ *   http:// url to the player
+ * @param array $params
+ *   parameters to pass to the embed code
+ * @param array $flashvars
+ *   flashvars to be used in the embed
+ * @return string
+ */
+function flvmediaplayer_build_embed_code_string($player_path, $params, $flashvars) {
+  // first we have to check for height and width data coming in on $params
+  $dimensions = ($params['width'] ? ' width="'. $params['width'] .'" ' : '') . ($params['height'] ? ' height="'. $params['height'] .'"' :'');
+  // build the object structure
+  $html = '<object '. $dimensions .'>';
+  // remove these from the parameters
+  unset($params['width'], $params['height']);
+  // now build out any parameters
+  foreach ($params as $name => $param) {
+    $html .= '<param name="'. $name .'" value="'. $param .'"></param>';
+  }
+
+  // create the flashvars
+  $data = array();
+  foreach ($flashvars as $name => $value) {
+    $data[] = $name .'='. $value;
+  }
+  // get all the options
+  if (count($data)) {
+    $vars = 'flashvars="'. implode('&', $data) .'" ';
+  }
+
+  // create the flashvars in the object
+  $html .= '<embed src="'. $player_path .'" '. $vars . $dimensions .'></embed>';
+  $html .= '</object>';
+  return $html;
+}
+
+
+/**
+ * builds an embed based on the incoming data, switch between
+ * data on $node, data in the node profile, or profile
+ * @param object $node
+ * @param string $profile
+ * @param array $params
+ * return array
+ */
+function flvmediaplayer_build_embed($node, $profile = null, $params = array()) {
+  // get the config data out so we can use it
+  $data = flvmediaplayer_node_data($node, $profile, $params, true); //, $params, true);
+  // now create the embed object
+  return flvmediaplayer_build_embed_code_string($data['player_path'], $data['params'], $data['flashvars']);
+}
+
+
+/**
+ * Insert the player into the node body.
+ * @ TODO make this a filter function
+ * @param object $node
+ *   A drupal node object.
+ * @param string $player
+ *   html version of the player
+ * @param boolean $embed
+ *   Whether the player should be inserted as an embed.
+ *
+ * @return html body text
+ */
+function flvmediaplayer_insert_player(&$node, $player) {
+  // can we find the replacement string?
+  if (strstr($node->content['body']['#value'], '[flvmediaplayer]')) {
+    $node->content['body']['#value'] = str_replace('[flvmediaplayer]', $player, $node->content['body']['#value'], $count);
+  }
+  // did not find it, append it
+  else {
+    $node->content['body']['#value'] .= $player;
+  }
+  // add the player on the node object for themers
+  $node->flvmediaplayer_display = $player;
+}
+
+
+/**
+ * Enable a custom base URL for flvmediaplayer links. This exsits for
+ * two reasons- one, it can be overriden in settings.php, two it can
+ * prevent issues with multiple URLs used on a single site
+ * @param string $path
+ * @return string URL string
+ */
+function flvmediaplayer_url($path = null) {
+  // if the url has http:// in it, don't do anything
+  if (strstr($path, 'http://')) {
+    return $path;
+  }
+  // does the the path start with a / ? Remove it
+  $path =  preg_replace('/^\//', '', $path);
+  return variable_get('flvmp_base_url', $GLOBALS['base_url']) .'/'. $path;
+}
+
+
+/* ******************************************************* */
+/* PROFILE FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * gets a list of all the config names keyed by pid
+ * @param string $return
+ *   controls what the key on the array is
+ * @return array
+ */
+function flvmediaplayer_profile_get_configs($return = 'pid') {
+  static $profiles;
+  // cache the profiles locally
+  if (! isset($profiles)) {
+    $results = db_query('SELECT name, pid FROM {flvmediaplayer_profiles}');
+    while ($result = db_fetch_array($results)) {
+      $profiles[$result[$return]] = $result['name'];
+    }
+  }
+  return $profiles;
+}
+
+
+/**
+ * gets the config data for a specific profile, caches locally
+ * @param string $profile_name
+ *   accepts a profile name or a PID
+ * @return array of config values and data
+ */
+function flvmediaplayer_profile_get_config($profile_name) {
+  static $configurations;
+  if (! $configurations[$profile_name]) {
+    $result = db_fetch_array(db_query('SELECT * FROM {flvmediaplayer_profiles} WHERE name = "%s" OR pid = "%s"', $profile_name, $profile_name));
+    $configuration[$profile_name] = unserialize($result['config']);
+    $configuration[$profile_name]['pid'] = $result['pid'];
+    $configuration[$profile_name]['name'] = $result['name'];
+  }
+  return $configuration[$profile_name];
+}
+
+
+/* ******************************************************* */
+/* THEME FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * Takes a set of variables and generates a player from them
+ * @param $player_path is the path to the the media player
+ * @param $params are the object parameters to pass
+ * @param $flashvars are the flash variables to pass
+ * @return the full flashplayer javascript
+ */
+function theme_flvmediaplayer_render_player($player_path, $params, $flashvars) {
+  return theme("swfobject_api", $player_path, $params, $flashvars);
+}
+
+
+/**
+ * no media option
+ * @param $node is a drupal node object
+ * @param $size is the size of the div
+ * @return some simple html to present media off line
+ */
+function theme_flvmediaplayer_no_media($node, $size) {
+  $html = '<div class="flvmediaplayer_offline" style="width:'. $size['width'] .'px; height:'. $size['height'] .'px;">';
+  $html .= t('Sorry, this media is currently off line') .'</div>';
+  return $html;
+}
+
+
+/**
+ * generates the embedding code from the variables provided
+ * @param string $player_path is full path to player
+ * @param string $params is the string of parameters
+ * @param string $flashvars is the string of flashvars
+ * @return formated html
+ */
+function theme_flvmediaplayer_embed_display($player_path, $params, $flashvars) {
+  // get the embed string
+  $embed_code = flvmediaplayer_build_embed_code_string($player_path, $params, $flashvars);
+
+  $output = '<div class="form-text-container">
+    <label for="sharecode">'. t('Embed this') .'</label>
+    <input type="text" id="sharecode" name="sharecode" value="'. htmlspecialchars($embed_code) .'" onClick="javascript:this.focus(); this.select();" class="form-text" />
+    </div>';
+
+  $form = array();
+  // build a form fieldset to place the embed inside
+  $form['embed'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Embed this video'),
+    '#collapsible' => true,
+    '#collapsed' => true,
+  );
+
+  $form['embed']['video'] = array(
+    '#type' => 'markup',
+    '#value' => $output,
+  );
+  return drupal_render($form);
+}
+
+
+/**
+ * themes a player based on a profile and inserted data
+ * @param object $node
+ *   drupal node object
+ * @param string $profile
+ *   profile to render node data through
+ * @param array $params
+ *   array of vars and params to replace
+ * @return string player display code
+ */
+function theme_flvmediaplayer_display($node, $profile = null, $params = array()) {
+  // get the configuration data for this node
+  $data = flvmediaplayer_node_data($node, $profile, $params);
+  if ($data) {
+    // create the player in HTML format
+  	$output = theme('flvmediaplayer_render_player', $data['player_path'], $data['params'], $data['flashvars']);
+    // should we attach embed code?
+    if ($data['embed_enable']) {
+      // check to see if we use this profile for embedding, or if another is selected
+      if ($data['embed_profile'] && $data['embed_profile'] != $data['profile_name']) {
+        $config = flvmediaplayer_node_data($node, $data['embed_profile'], $params);
+      }
+      // now create the embed code
+      $output .= theme("flvmediaplayer_embed_display", $data['player_path'], $data['params'], $data['flashvars']);
+    }
+    return $output;
+  }
+}

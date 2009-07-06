@@ -1,0 +1,931 @@
+# $Id: i18n.pot,v 1.1.8.1 2007/08/03 09:50:39 magico Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  i18n.module,v 1.36.2.11 2007/04/21 23:29:35 jareyero
+#  translation.module,v 1.3.2.10 2007/05/03 09:34:34 jareyero
+#  i18nblocks.module,v 1.1.2.4 2007/04/05 19:01:04 jareyero
+#  i18nstrings.module,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  i18nmenu.module,v 1.4.2.1 2007/04/02 20:41:02 jareyero
+#  i18ntaxonomy.module,v 1.1.2.1 2007/04/03 20:54:55 jareyero
+#  i18ncontent.module,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  i18nprofile.module,v 1.3.2.1 2007/03/19 12:55:44 jareyero
+#  i18nsync.module,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  ttext.module,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  i18nstrings.install,v 1.1.2.2 2007/03/19 12:30:44 jareyero
+#  ttext.install,v 1.1.2.2 2007/03/19 12:30:44 jareyero
+#  i18ncontent.info,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  i18nsync.info,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  ttext.info,v 1.1.2.1 2007/02/11 15:45:22 jareyero
+#  i18nviews.module,v 1.1.2.5 2007/04/25 19:07:02 jareyero
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-07-04 18:50+0100\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: i18n.module:55
+msgid "Language switcher"
+msgstr ""
+
+#: i18n.module:58 translation/translation.module:153
+msgid "Languages"
+msgstr ""
+
+#: i18n.module:110
+msgid "This module provides support for multilingual content in Drupal sites:"
+msgstr ""
+
+#: i18n.module:112
+msgid "Translation of the user interface for anonymous users (combined with locale)"
+msgstr ""
+
+#: i18n.module:113
+msgid "Multi-language for content. Adds a language field for nodes and taxonomy vocabularies and terms"
+msgstr ""
+
+#: i18n.module:114;264
+msgid "Browser language detection"
+msgstr ""
+
+#: i18n.module:115
+msgid "Keeps the language setting accross consecutive requests using URL rewriting"
+msgstr ""
+
+#: i18n.module:116
+msgid "Provides a block for language selection and two theme functions: <i>i18n_flags</i> and <i>i18n_links</i>"
+msgstr ""
+
+#: i18n.module:117
+msgid "Support for long locale names"
+msgstr ""
+
+#: i18n.module:118
+msgid "Multilingual menu items"
+msgstr ""
+
+#: i18n.module:120 translation/translation.module:38
+msgid "For more information please read the <a href=\"@i18n\">on-line help pages</a>."
+msgstr ""
+
+#: i18n.module:123
+msgid "To enable multilingual support for specific content types go to !configure_content_types."
+msgstr ""
+
+#: i18n.module:123
+msgid "configure content types"
+msgstr ""
+
+#: i18n.module:137
+msgid "Multilingual system"
+msgstr ""
+
+#: i18n.module:138
+msgid "Configure multilingual content and translation."
+msgstr ""
+
+#: i18n.module:145 i18n.info:0
+msgid "Internationalization"
+msgstr ""
+
+#: i18n.module:149;260
+msgid "Manage languages"
+msgstr ""
+
+#: i18n.module:150
+msgid "Configure languages."
+msgstr ""
+
+#: i18n.module:194
+msgid "The menu item %title has been updated with node language."
+msgstr ""
+
+#: i18n.module:198
+msgid "The menu item %title has been added with node language."
+msgstr ""
+
+#: i18n.module:231
+msgid "Reset language for all terms."
+msgstr ""
+
+#: i18n.module:260
+msgid "No languages enabled. Visit the !locale_admin page to set up your languages."
+msgstr ""
+
+#: i18n.module:266;635 i18nblocks/i18nblocks.module:79 translation/translation.module:137
+msgid "Disabled"
+msgstr ""
+
+#: i18n.module:266;912 i18nblocks/i18nblocks.module:79 translation/translation.module:137
+msgid "Enabled"
+msgstr ""
+
+#: i18n.module:267
+msgid "User browser language for home page and links without language prefix."
+msgstr ""
+
+#: i18n.module:273
+msgid "Language icons settings"
+msgstr ""
+
+#: i18n.module:279
+msgid "Language icons path"
+msgstr ""
+
+#: i18n.module:283
+msgid "Path for language icons, relative to Drupal installation. '*' is a placeholder for language code."
+msgstr ""
+
+#: i18n.module:287
+msgid "Language icons size"
+msgstr ""
+
+#: i18n.module:291
+msgid "Image size for language icons, in the form \"width x height\"."
+msgstr ""
+
+#: i18n.module:297
+msgid "Advanced settings"
+msgstr ""
+
+#: i18n.module:303
+msgid "Content selection mode"
+msgstr ""
+
+#: i18n.module:306
+msgid "Determines which content to show depending on language."
+msgstr ""
+
+#: i18n.module:625
+msgid "Only current language and no language"
+msgstr ""
+
+#: i18n.module:626
+msgid "Only current and default languages and no language"
+msgstr ""
+
+#: i18n.module:627
+msgid "Only default language and no language"
+msgstr ""
+
+#: i18n.module:628
+msgid "Only current language"
+msgstr ""
+
+#: i18n.module:629
+msgid "All content. No language conditions apply"
+msgstr ""
+
+#: i18n.module:636
+msgid "Normal - All enabled languages will be allowed."
+msgstr ""
+
+#: i18n.module:637
+msgid "Extended - All defined languages will be allowed."
+msgstr ""
+
+#: i18n.module:796
+msgid "Multilingual options"
+msgstr ""
+
+#: i18n.module:797
+msgid "This language will be set for all terms in this vocabulary"
+msgstr ""
+
+#: i18n.module:811
+msgid "Multilingual support"
+msgstr ""
+
+#: i18n.module:814
+msgid "Enables language field and multilingual support for this content type."
+msgstr ""
+
+#: i18n.module:847
+msgid "You can set a language for this menu item."
+msgstr ""
+
+#: i18n.module:856
+msgid "Multilingual settings"
+msgstr ""
+
+#: i18n.module:859
+msgid "If you change the Language, you must click on <i>Preview</i> to get the right Categories &amp; Terms for that language."
+msgstr ""
+
+#: i18n.module:909
+msgid "n/a"
+msgstr ""
+
+#: i18n.module:909
+msgid "delete"
+msgstr ""
+
+#: i18n.module:912
+msgid "Code"
+msgstr ""
+
+#: i18n.module:912
+msgid "English name"
+msgstr ""
+
+#: i18n.module:912
+msgid "Native name"
+msgstr ""
+
+#: i18n.module:912 experimental/i18nstrings.module:50
+msgid "Default"
+msgstr ""
+
+#: i18n.module:912
+msgid "RTL"
+msgstr ""
+
+#: i18n.module:912
+msgid "Translated"
+msgstr ""
+
+#: i18n.module:912 translation/translation.module:560;817
+msgid "Operations"
+msgstr ""
+
+#: i18n.module:944
+msgid "This is a multilingual variable."
+msgstr ""
+
+#: i18n.module:960
+msgid "Reset to defaults"
+msgstr ""
+
+#: i18n.module:1077 translation/translation.module:560;602;1093
+msgid "Language"
+msgstr ""
+
+#: i18n.module:891
+msgid "administer all languages"
+msgstr ""
+
+#: i18n.module:0
+msgid "i18n"
+msgstr ""
+
+#: i18n.info:0
+msgid "Enables multilingual content."
+msgstr ""
+
+#: i18n.info:0 contrib/i18nmenu.info:0 contrib/i18ntaxonomy.info:0 i18nblocks/i18nblocks.info:0 i18nprofile/i18nprofile.info:0 i18nviews/i18nviews.info:0 translation/translation.info:0
+msgid "Multilanguage - i18n"
+msgstr ""
+
+#: contrib/i18nmenu.module:43
+msgid "\n        <p>This module provides support for translatable custom menu items:</p>\n        <ul>\n        <li>Create menus as usual, with names in English. If the menu is already created, no changes are needeed</li>\n        <li>Show the menu in some block</li>\n        <li>Switch language to some non english one -while viewing the block-, so the <i>locales</i> table is populated with the new strings</li>\n        <li>Use the localization system to translate menu item strings</li>\n        </ul>"
+msgstr ""
+
+#: contrib/i18nmenu.module:0
+msgid "i18nmenu"
+msgstr ""
+
+#: contrib/i18ntaxonomy.module:25
+msgid "Vocabulary Translation"
+msgstr ""
+
+#: contrib/i18ntaxonomy.module:28
+msgid "Vocabularies to translate through localization system"
+msgstr ""
+
+#: contrib/i18ntaxonomy.module:187
+msgid "none"
+msgstr ""
+
+#: contrib/i18ntaxonomy.module:0
+msgid "i18ntaxonomy"
+msgstr ""
+
+#: contrib/i18nmenu.info:0
+msgid "i18n - menu"
+msgstr ""
+
+#: contrib/i18nmenu.info:0
+msgid "Supports translatable custom menu items."
+msgstr ""
+
+#: contrib/i18ntaxonomy.info:0
+msgid "i18n - taxonomy"
+msgstr ""
+
+#: contrib/i18ntaxonomy.info:0
+msgid "Translates taxonomy terms using localization system."
+msgstr ""
+
+#: experimental/i18ncontent.module:0
+msgid "i18ncontent"
+msgstr ""
+
+#: experimental/i18nstrings.module:21 experimental/i18nstrings.info:0
+msgid "Strings"
+msgstr ""
+
+#: experimental/i18nstrings.module:22 experimental/i18nstrings.info:0
+msgid "Translatable strings."
+msgstr ""
+
+#: experimental/i18nstrings.module:50
+msgid "String Id"
+msgstr ""
+
+#: experimental/i18nstrings.module:57 translation/translation.module:839
+msgid "edit"
+msgstr ""
+
+#: experimental/i18nstrings.module:70 translation/translation.module:65;150
+msgid "Translations"
+msgstr ""
+
+#: experimental/i18nstrings.module:84 i18nprofile/i18nprofile.module:213 translation/translation.module:378;790;875
+msgid "Save"
+msgstr ""
+
+#: experimental/i18nstrings.module:96
+msgid "The strings have been updated"
+msgstr ""
+
+#: experimental/i18nstrings.module:0
+msgid "i18nstrings"
+msgstr ""
+
+#: experimental/i18nsync.module:24
+msgid "Synchronize node translations"
+msgstr ""
+
+#: experimental/i18nsync.module:26
+msgid "Synchronize terms of this vocabulary for node translations."
+msgstr ""
+
+#: experimental/i18nsync.module:67
+msgid "Node translations have been synchronized."
+msgstr ""
+
+#: experimental/i18nsync.module:0
+msgid "i18nsync"
+msgstr ""
+
+#: experimental/ttext.module:0
+msgid "ttext"
+msgstr ""
+
+#: experimental/i18nstrings.install:19
+msgid "Database type not supported. This module, i18nstrings, needs manual installation."
+msgstr ""
+
+#: experimental/ttext.install:22
+msgid "Database type not supported. This module, ttext, needs manual installation."
+msgstr ""
+
+#: experimental/i18ncontent.info:0
+msgid "i18n - content types"
+msgstr ""
+
+#: experimental/i18ncontent.info:0
+msgid "Translates content type parameters."
+msgstr ""
+
+#: experimental/i18ncontent.info:0 experimental/i18nstrings.info:0 experimental/i18nsync.info:0 experimental/ttext.info:0
+msgid "Multilanguage - i18n - experimental"
+msgstr ""
+
+#: experimental/i18nsync.info:0
+msgid "Synchronization"
+msgstr ""
+
+#: experimental/i18nsync.info:0
+msgid "Synchronizes translations"
+msgstr ""
+
+#: experimental/ttext.info:0
+msgid "Translatable Text"
+msgstr ""
+
+#: experimental/ttext.info:0
+msgid "CCK translatable text field"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:16
+msgid "<h2>This module provides support for multilingual blocks</h2>\n        <p>These are not real blocks, but metablocks that group together a number of normal blocks and display the right one depending on language</p>\n        <p>In the block administration pages you will find a new tab for creating \"Multilingual blocks\". Set them up as usual and define which one of the other blocks will be shown for each language.</p>\n        "
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:21
+msgid "<p>These are not real blocks, but metablocks that group together a number of normal blocks and display the right one depending on language</p>"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:31
+msgid "Add multilingual block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:77
+msgid "Create translation blocks automatically"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:80
+msgid "Automatic synchronization with blocks generated by nodeasblock module."
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:105
+msgid "Some block settings have been overridden by the translation block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:155
+msgid "Translation: !title"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:208
+msgid " -- "
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:218
+msgid "Block description"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:219;308
+msgid "Multilingual block !number"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:224
+msgid "Select the block to be displayed for each language"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:237
+msgid "Delete this block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:241
+msgid "Normal translation block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:245
+msgid "Node as block with automatic synchronization"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:249
+msgid "Create block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:260;307
+msgid "New multilingual block"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:311
+msgid "Created new block '%name'"
+msgstr ""
+
+#: i18nblocks/i18nblocks.module:0
+msgid "i18nblocks"
+msgstr ""
+
+#: i18nblocks/i18nblocks.info:0
+msgid "i18n - blocks"
+msgstr ""
+
+#: i18nblocks/i18nblocks.info:0
+msgid "Enables multilingual blocks."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:19
+msgid "Supports translation for profile module field names and descriptions."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:32
+msgid "profile"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:36 translation/translation.module:0
+msgid "translation"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:119
+msgid "The content of this field is private and only visible to yourself."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:252
+msgid "Categories"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:265;290
+msgid "add"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:270;298
+msgid "English"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:274
+msgid "Fields"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:296
+msgid "No fields defined."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:298
+msgid "Name"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:298;335
+msgid "Category"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:322
+msgid "Source field"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:325;345 translation/translation.module:560;602;1093
+msgid "Title"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:330
+msgid "Form name"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:340
+msgid "%language_name translation"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:347
+msgid "The title of the new field. The title will be shown to the user. An example title is \"Favorite color\"."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:351
+msgid "Explanation"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:353
+msgid "An optional explanation to go with the new field. The explanation will be shown to the user."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:358
+msgid "Selection options"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:359
+msgid "A list of all options. You need to update this translation when you change the options in the original language."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:372;379
+msgid "Page title"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:374
+msgid "To enable browsing this field by value, enter a title for the resulting page. The word <code>%value</code> will be substituted with the corresponding value. An example page title is \"People whose favorite color is %value\". This is only applicable for a public field."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:381
+msgid "To enable browsing this field by value, enter a title for the resulting page. An example page title is \"People who are employed\". This is only applicable for a public field."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:386
+msgid "Save field"
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:401
+msgid "The field translation has been created."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:406
+msgid "The profile field translation has been updated."
+msgstr ""
+
+#: i18nprofile/i18nprofile.module:0
+msgid "i18nprofile"
+msgstr ""
+
+#: i18nprofile/i18nprofile.info:0
+msgid "i18n - profile"
+msgstr ""
+
+#: i18nprofile/i18nprofile.info:0
+msgid "Enables multilingual profile fields."
+msgstr ""
+
+#: i18nviews/i18nviews.module:30;35
+msgid "Internationalization: Language"
+msgstr ""
+
+#: i18nviews/i18nviews.module:40
+msgid "Enabled languages for content."
+msgstr ""
+
+#: i18nviews/i18nviews.module:44
+msgid "Internationalization: Language (extended)"
+msgstr ""
+
+#: i18nviews/i18nviews.module:49
+msgid "All defined languages for content."
+msgstr ""
+
+#: i18nviews/i18nviews.module:52
+msgid "Internationalization: Selection"
+msgstr ""
+
+#: i18nviews/i18nviews.module:55
+msgid "Is"
+msgstr ""
+
+#: i18nviews/i18nviews.module:57
+msgid "Content language."
+msgstr ""
+
+#: i18nviews/i18nviews.module:0
+msgid "i18nviews"
+msgstr ""
+
+#: i18nviews/i18nviews.info:0
+msgid "i18n - views"
+msgstr ""
+
+#: i18nviews/i18nviews.info:0
+msgid "Views support for i18n"
+msgstr ""
+
+#: translation/translation.module:26
+msgid "This module is part of i18n package and provides support for translation relationships."
+msgstr ""
+
+#: translation/translation.module:27
+msgid "The objects you can define translation relationships for are:"
+msgstr ""
+
+#: translation/translation.module:29
+msgid "Nodes."
+msgstr ""
+
+#: translation/translation.module:30
+msgid "Taxonomy Terms"
+msgstr ""
+
+#: translation/translation.module:32
+msgid "Additional features:"
+msgstr ""
+
+#: translation/translation.module:34
+msgid "<i>Translations</i> block that looks like the language switcher provided by i18n module but also links to translations when available."
+msgstr ""
+
+#: translation/translation.module:35
+msgid "Basic translation workflow and administration page for content translation."
+msgstr ""
+
+#: translation/translation.module:36
+msgid "Links for node translations that can be displayed below each node, depending on module settings."
+msgstr ""
+
+#: translation/translation.module:42
+msgid "<h2>Translations</h2>"
+msgstr ""
+
+#: translation/translation.module:43
+msgid "<strong>translate nodes</strong> <p>This one, combined with create content permissions, will allow to create node translation</p>"
+msgstr ""
+
+#: translation/translation.module:57;79;88 translation/translation.info:0
+msgid "Translation"
+msgstr ""
+
+#: translation/translation.module:66
+msgid "Manage content translations."
+msgstr ""
+
+#: translation/translation.module:70
+msgid "List"
+msgstr ""
+
+#: translation/translation.module:121
+msgid "Language Management"
+msgstr ""
+
+#: translation/translation.module:123
+msgid "Interface language depends on content."
+msgstr ""
+
+#: translation/translation.module:123
+msgid "Interface language is independent"
+msgstr ""
+
+#: translation/translation.module:124
+msgid "Whether the whole page should switch language when clicking on a node translation or not."
+msgstr ""
+
+#: translation/translation.module:128
+msgid "Links to node translations"
+msgstr ""
+
+#: translation/translation.module:130
+msgid "None."
+msgstr ""
+
+#: translation/translation.module:130
+msgid "Main page only"
+msgstr ""
+
+#: translation/translation.module:130
+msgid "Teaser and Main page"
+msgstr ""
+
+#: translation/translation.module:131
+msgid "Links from nodes to translated versions."
+msgstr ""
+
+#: translation/translation.module:135;214
+msgid "Translation workflow"
+msgstr ""
+
+#: translation/translation.module:138
+msgid "If enabled some worklow will be provided for content translation."
+msgstr ""
+
+#: translation/translation.module:188
+msgid "Language cannot be changed while creating a translation."
+msgstr ""
+
+#: translation/translation.module:204
+msgid "Language and translations"
+msgstr ""
+
+#: translation/translation.module:216
+msgid "Use the translation workflow to keep track of content that needs translation."
+msgstr ""
+
+#: translation/translation.module:229
+msgid "Files from translated content"
+msgstr ""
+
+#: translation/translation.module:234
+msgid "You can remove the files for this translation or keep the original files and translate the description."
+msgstr ""
+
+#: translation/translation.module:342
+msgid "You need to set a language before creating a translation."
+msgstr ""
+
+#: translation/translation.module:353;630
+msgid "Remove"
+msgstr ""
+
+#: translation/translation.module:374
+msgid "Select translation for %language"
+msgstr ""
+
+#: translation/translation.module:441
+msgid "published"
+msgstr ""
+
+#: translation/translation.module:441
+msgid "not published"
+msgstr ""
+
+#: translation/translation.module:444
+msgid "edit translation"
+msgstr ""
+
+#: translation/translation.module:450;613
+msgid "create translation"
+msgstr ""
+
+#: translation/translation.module:451;616
+msgid "select node"
+msgstr ""
+
+#: translation/translation.module:507
+msgid "And translation conditions are"
+msgstr ""
+
+#: translation/translation.module:512
+msgid "source language"
+msgstr ""
+
+#: translation/translation.module:514
+msgid "source status"
+msgstr ""
+
+#: translation/translation.module:516
+msgid "translation language"
+msgstr ""
+
+#: translation/translation.module:518
+msgid "translation status"
+msgstr ""
+
+#: translation/translation.module:520;542
+msgid "Filter"
+msgstr ""
+
+#: translation/translation.module:522;548
+msgid "Reset"
+msgstr ""
+
+#: translation/translation.module:560
+msgid "Type"
+msgstr ""
+
+#: translation/translation.module:560
+msgid "Author"
+msgstr ""
+
+#: translation/translation.module:560;602
+msgid "Status"
+msgstr ""
+
+#: translation/translation.module:560
+msgid "Translation status"
+msgstr ""
+
+#: translation/translation.module:578
+msgid "No posts available."
+msgstr ""
+
+#: translation/translation.module:602
+msgid "Options"
+msgstr ""
+
+#: translation/translation.module:610
+msgid "Published"
+msgstr ""
+
+#: translation/translation.module:610
+msgid "Not published"
+msgstr ""
+
+#: translation/translation.module:612
+msgid "Not translated"
+msgstr ""
+
+#: translation/translation.module:623
+msgid "Current translations"
+msgstr ""
+
+#: translation/translation.module:630
+msgid "Remove node from this translation set"
+msgstr ""
+
+#: translation/translation.module:650
+msgid "<p>No nodes available in %language</p>"
+msgstr ""
+
+#: translation/translation.module:670
+msgid "The translation has been saved"
+msgstr ""
+
+#: translation/translation.module:685
+msgid "Removed translation information from term"
+msgstr ""
+
+#: translation/translation.module:792
+msgid "Edit term translations"
+msgstr ""
+
+#: translation/translation.module:795;796
+msgid "Submit"
+msgstr ""
+
+#: translation/translation.module:843
+msgid "new translation"
+msgstr ""
+
+#: translation/translation.module:900
+msgid "Term translations have been updated"
+msgstr ""
+
+#: translation/translation.module:1054
+msgid "None"
+msgstr ""
+
+#: translation/translation.module:1055
+msgid "Source content (to be translated)"
+msgstr ""
+
+#: translation/translation.module:1056
+msgid "Translation in progress"
+msgstr ""
+
+#: translation/translation.module:1057
+msgid "Translated content"
+msgstr ""
+
+#: translation/translation.module:1058
+msgid "Source updated (to update translation)"
+msgstr ""
+
+#: translation/translation.module:112
+msgid "translate nodes"
+msgstr ""
+
+#: translation/translation.info:0
+msgid "Manages translations between nodes and taxonomy terms."
+msgstr ""
+

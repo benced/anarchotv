@@ -1,0 +1,30 @@
+.mceItemDrupalAsset {
+	border: 1px dotted #cc0000;
+	background-color: #ffffcc;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+img.mceItemDrupalAsset {
+  background-image: url('images/doc-option-edit.png');
+  display: block;
+}
+a.mceItemDrupalAsset {
+  padding: 0 3px;
+}
+
+.asset-left{
+	float: left;
+	margin-right: 1em;
+}
+.asset-right{
+	float: right;
+	margin-left: 1em;
+}
+.asset-center{
+  float: none;
+  clear: both;
+  margin: 0 auto;
+}
+.asset-none{
+	float: none;
+}

@@ -1,0 +1,53 @@
+<?php
+// $Id: cclinks.install,v 1.1.2.1.2.1 2008/04/04 09:31:50 fago Exp $
+
+/*
+ * Implementation of hook_install()
+ */
+function cclinks_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {cclink_schedules} (
+                  vid int(10) unsigned NOT NULL,
+                  nid int(10) unsigned NOT NULL,
+                  event varchar(32) NOT NULL default '',
+                  date int(11) NOT NULL default '0',
+                  PRIMARY KEY (vid, event)
+                ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+              );
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {cclink_schedules} (
+                  vid integer NOT NULL default '0',
+                  nid integer NOT NULL default '0',
+                  event varchar(32) NOT NULL default '',
+                  date integer NOT NULL default '0',
+                  PRIMARY KEY (vid, event));"
+              );
+      break;
+  }
+}
+
+/*
+ * Implementation of hook_uninstall()
+ */
+function cclinks_uninstall() {
+  db_query("DROP TABLE {cclink_schedules}");
+  variable_del('cclink_settings');
+}
+
+
+function cclinks_update_1() {
+  if ($cclinks = variable_get('cclink_settings', array())) {
+    $events = array_keys($cclinks);
+    $last_event = array_pop($events);
+    $i = 0;
+    while ($last_event && 'cclink'. $i != $last_event) {
+      $cclinks += array('cclink'. $i => NULL);
+      $i++;
+    }
+    variable_set('cclink_settings', $cclinks);
+  }
+  return array();
+}

@@ -1,0 +1,3 @@
+$Id: API.txt,v 1.1.2.1 2007/12/20 13:04:46 fago Exp $
+
+Read about the state machine API at http://drupal.org/node/202648

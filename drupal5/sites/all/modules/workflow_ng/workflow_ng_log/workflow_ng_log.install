@@ -1,0 +1,70 @@
+<?php
+// $Id: workflow_ng_log.install,v 1.1.2.2 2008/03/25 17:20:29 fago Exp $
+
+/*
+ * Implementation of hook_install()
+ */
+function workflow_ng_log_install() {
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      db_query("CREATE TABLE if not exists {workflow_ng_log_user} (
+        mid int unsigned NOT NULL auto_increment,
+        uid int unsigned NOT NULL default '0',
+        type varchar(255),
+        category varchar(255),
+        message longtext NOT NULL,
+        time int NOT NULL default '0',
+        PRIMARY KEY (mid)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      db_query("CREATE TABLE if not exists {workflow_ng_log_node} (
+        mid int unsigned NOT NULL auto_increment,
+        nid int unsigned NOT NULL default '0',
+        type varchar(255),
+        category varchar(255),
+        message longtext NOT NULL,
+        time int NOT NULL default '0',
+        PRIMARY KEY (mid)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {workflow_ng_log_user} (
+        mid serial CHECK (mid >= 0),
+        uid int_unsigned NOT NULL default '0',
+        type varchar(255),
+        category varchar(255),
+        message text NOT NULL,
+        time integer,
+        PRIMARY KEY (mid)
+      )");
+      db_query("CREATE TABLE {workflow_ng_log_node} (
+        mid serial CHECK (mid >= 0),
+        nid int_unsigned NOT NULL default '0',
+        type varchar(255),
+        category varchar(255),
+        message text NOT NULL,
+        time integer,
+        PRIMARY KEY (mid)
+      )");
+      break;
+    default:
+      break;
+  }
+}
+
+/*
+ * Implementation of hook_uninstall()
+ */
+function workflow_ng_log_uninstall() {
+  db_query("DROP TABLE {workflow_ng_log_user}");
+  db_query("DROP TABLE {workflow_ng_log_node}");
+}
+
+/**
+ * Clear the menu cache
+ */
+function workflow_ng_log_update_5001() {
+  cache_clear_all('*', 'cache_menu', TRUE);
+  return array();
+}

@@ -1,0 +1,23 @@
+<?php
+// $Id: asset_embed.install,v 1.1.2.1 2008/07/24 10:44:16 wmostrey Exp $
+
+/**
+ * Implementation of hook_install()
+ */
+function asset_embed_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {asset_embed} (
+        aid int(10) unsigned NOT NULL,
+        data text NOT NULL,
+        PRIMARY KEY  (aid)
+      ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+    case 'pgsql':
+      //TODO: postgresql 
+      break;
+  }
+  drupal_set_message(t('Asset Embed tables have been configured.'));
+}
+

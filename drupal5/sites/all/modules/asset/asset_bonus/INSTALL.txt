@@ -1,0 +1,16 @@
+In order to use this module please download an additional set of files from 
+http://mostrey.be/files/asset_bonus.zip.  Unzip these files into 
+the asset_bonus folder resulting in a file structure like:
+
+- asset_bonus
+  |--audioplayer
+  |  |--audioplayer.js
+  |  |--player.swf
+  |
+  |--swfheader
+  |  |--swfheader.class.php
+  |
+  |--swfobject
+     |--swfobject.js
+     |--flvplayer.swf
+     |--flvplayer.txt

@@ -1,0 +1,9 @@
+; $Id: votingapi.info,v 1.2.2.3 2007/07/09 01:15:20 eaton Exp $
+name = Voting API
+description = Provides a shared voting API for other modules.
+package = Voting API
+; Information added by drupal.org packaging script on 2008-05-01
+version = "5.x-1.6"
+project = "votingapi"
+datestamp = "1209603313"
+

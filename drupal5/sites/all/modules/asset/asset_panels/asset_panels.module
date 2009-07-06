@@ -1,0 +1,211 @@
+<?php
+/**
+ * Callback function to supply a list of content types.
+ */
+function asset_panels_panels_content_types() {
+  $items['gallery'] = array(
+    'callback' => 'asset_panels_content_gallery',
+    'admin' => 'asset_panels_admin_gallery',
+  );
+  return $items;
+}
+
+/**
+ * Output function for the 'node' content type. Outputs a node
+ * based on the module and delta supplied in the configuration.
+ */
+function asset_panels_content_gallery($conf, $more_link = "") {
+  $node = node_load($conf['nid']);
+  if(function_exists('i18n_get_lang')) {
+    $lang = i18n_get_lang();
+    if($node->language!=$lang && isset($node->translation[$lang]->nid)) {
+      $node = node_load($node->translation[$lang]->nid);
+    }
+  }
+  if (!node_access('view', $node)) {
+    return;
+  }
+  $is_audio = array('mp3', 'wma', 'wav', 'ogg', 'm4a', 'aac');
+  $count = 0;
+  $assets = array();
+  // 1. Build an array of all non-audio assets
+  foreach($node as $fieldname => $value) {
+    if(substr($fieldname, 0, 6)=="field_") {
+      // For each cck field, check if it's an asset field
+      $fields = content_fields($fieldname, $node->type);
+      if($fields['type']=="asset") {
+        foreach($node->$fieldname as $asset) {
+          // Add the html code for the preview
+          if(!empty($asset['aid'])) {
+            $a = asset_load(array('aid' => $asset['aid']));
+            if(!in_array($a->extension, $is_audio)) {
+              $assets[] = array(
+                'aid' => $asset['aid'],
+                'caption' => $asset['caption'],
+                'copyright' => $asset['copyright'],
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 2. Make some calculations (how many pages we have for instance)
+  $amount_of_assets = count($assets);
+  if($conf['asset_amount'] < $amount_of_assets) $amount_of_assets = $conf['asset_amount'];
+  $amount_of_assets_per_page = $conf['asset_amount_per_page'];
+  if($amount_of_assets > $amount_of_assets_per_page) {
+  	// There are more assets than we are allow to show on one page
+    $amount_of_pages = round($amount_of_assets / $amount_of_assets_per_page);	
+  }
+  else {
+  	// There are less assets than we are allow to show on one page, so we display them all
+    $amount_of_pages = 0;
+  }
+  
+  // 3. Display $conf['asset_amount'] of assets, depending on which page you're at
+  $page_this = $_GET['page'] ? $_GET['page'] : 1;
+  $page_prev = $page_this - 1;
+  $page_next = $page_this + 1;
+  $range_from = 0;
+  if(!$amount_of_pages) {
+    $range_from = 0;
+    $range_to = $amount_of_assets - 1;
+  }
+  else {
+    $range_from = $page_prev * $amount_of_assets_per_page;
+    $range_to = $range_from + $amount_of_assets_per_page - 1;
+  }
+  $output = "<div class='asset-gallery'>";
+  foreach (range($range_from, $range_to) as $range) {
+    if($assets[$range]) {
+      $output.= "<div class='asset-gallery-item-wrapper'><div class='asset-gallery-item'>";
+      $asset = array($assets[$range]);
+      $output.= asset_lightbox($asset);
+      $output.= "</div></div>";
+    }
+  }
+  if($more_link) $output.= "<div class='asset-gallery-more read-more'>" . l(t("More"), $more_link) . "</div>";
+  $output .= '</div>';
+  
+  // 4. Generate the pager
+  if($amount_of_pages) {
+    $output.= '<div class="pager">';
+    if($_GET['page'] && $_GET['page']!=1) {
+      $output.= '
+        <a href="/'.$_GET['q'].'" class="pager-first active">&laquo; '.t('first').'</a>
+        <a href="/'.$_GET['q'].'?page='.$page_prev.'" class="pager-previous active">&lsaquo; '.t('previous').'</a>';
+    }
+    $output.= '<span class="pager-list">'.t('Page');
+    foreach(range(1, $amount_of_pages) as $range) {
+      if($range!=$page_this) {
+      	$output.= '<a href="/'.$_GET['q'].'?page='.$range.'" class="pager-last active">'.$range.'</a>';
+      }
+      else {
+        $output.= '<strong class="pager-current">'.$range.'</strong>';
+      } 
+    }
+    $output.= '</span>';
+    if($_GET['page'] < $amount_of_pages) {
+      $output.= '
+        <a href="/'.$_GET['q'].'?page='.$page_next.'" class="pager-last active">'.t('next').' &rsaquo;</a>
+        <a href="/'.$_GET['q'].'?page='.$amount_of_pages.'" class="pager-last active">'.t('last').' &raquo;</a>';
+    }
+    $output.= '</div><span class="clear"></span>';
+  }
+  
+  // 5. Display it all
+  return $output;
+}
+
+/** 
+ * Callback to perform administrative functions on the content block
+ */
+function asset_panels_admin_gallery($op, &$arg, $arg2 = NULL) {
+  switch ($op) {
+    case 'list':
+      $conf = $arg;
+      $node = node_load($conf['nid']);
+      return '<strong>Node</strong>: ' . check_plain($node->title);
+    case 'add button':
+      $form['nid'] = array(
+        '#title' => t('Enter the title or NID of a post to gallerize its assets'),
+        '#type' => 'textfield',
+        '#maxlength' => 512,
+        '#autocomplete_path' => 'panels/node/autocomplete',
+        '#weight'  => -10,
+      );
+      $form['submit'] = array(
+        '#type' => 'button',
+        '#value' => t('Add asset gallery'),
+      );
+      $form['#prefix'] = '<div class="container-inline">';
+      $form['#suffix'] = '</div>';
+      return $form;
+    case 'add':
+      if ($_POST['op'] != t('Add asset gallery')) {
+        return;
+      }
+      $form = &$arg;
+      if (is_numeric($form['nid'])) {
+        $conf = array();
+        $conf['nid'] = $form['nid'];
+      }
+      else {
+        $conf = db_fetch_array(db_query(db_rewrite_sql("SELECT n.nid FROM {node} n WHERE LOWER(title) = LOWER('%s')"), $form['nid']));
+        if (!$conf['nid']) {
+          drupal_set_message(t('Unable to find "%s"', array('%s' => check_plain($form['nid']))));
+          return;
+        }
+      }
+      // default to just teaser
+      $conf['teaser'] = TRUE;
+      return $conf;
+    case 'edit':
+      $conf = &$arg;
+      $node = node_load($conf['nid']);
+      $form['nid'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $conf['nid'],
+      );
+      $form['asset_amount'] = array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => $conf['asset_amount'] ? $conf['asset_amount'] : "2",
+        '#title' => t('Amount of assets'),
+        '#description' => t('How many assets should be displayed?'),
+        '#required' => TRUE,
+      );
+      $form['asset_amount_per_page'] = array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => $conf['asset_amount_per_page'] ? $conf['asset_amount_per_page'] : "4",
+        '#title' => t('Amount of assets per page'),
+        '#description' => t('How many assets should be displayed per page?'),
+        '#required' => TRUE,
+      );
+      $form['create_block'] = array(
+        '#type' => 'checkbox',
+        '#default_value' => $conf['create_block'],
+        '#title' => t('Create a block from this gallery?'),
+      );
+      $form['view_node'] = array(
+        '#value' => t('<a href="@asset-gallery">View the original asset node</a>', array('@asset-gallery' => url("node/" . $node->nid))),
+      );
+      return $form;
+    case 'validate':
+      $form = &$arg;
+      if(!is_numeric($form['asset_amount'])) {
+        form_set_error('asset_amount', t('Amount should be a number.'));  
+      }
+      elseif($form['asset_amount'] <= 0) {
+        form_set_error('asset_amount', t('Amount should be at least 1.'));          
+      }
+      return;
+    case 'save':
+      // For this one, the form values go directly into the config.
+      $form = &$arg;
+      return $form;
+  }
+}

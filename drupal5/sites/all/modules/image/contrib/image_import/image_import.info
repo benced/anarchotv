@@ -1,0 +1,12 @@
+; $Id: image_import.info,v 1.3 2007/07/18 17:04:37 drewish Exp $
+name = Image Import
+description = Allows batches of images to be imported from a directory on the server.
+package = Image
+dependencies = image
+
+
+; Information added by drupal.org packaging script on 2008-08-17
+version = "5.x-2.0-alpha3"
+project = "image"
+datestamp = "1218964512"
+

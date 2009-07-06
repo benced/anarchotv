@@ -1,0 +1,30 @@
+<?php
+
+// $Id: xspf_playlist.install,v 1.1.2.4 2008/12/19 19:48:46 arthuregg Exp $
+
+/**
+ * Implmentation of hook_uninstall().
+ *
+ * Remove variables handled by this module.
+ */
+function xspf_playlist_uninstall() {
+  $variables = array(
+    'xspf_playlist_title',
+    'xspf_playlist_info',
+    'xspf_playlist_filetypes',
+  );
+  foreach ($variables as $name) {
+    variable_del($name);
+  }
+}
+
+function xspf_playlist_update_5120() {
+  // get the current type settings
+  $types = variable_get('xspfp_filetype', 'flv jpg gif png mp3');
+  // delete the badly named variable
+  variable_del('xspfp_filetype');
+  // remove commas and set spaces
+  variable_set('xspf_playlist_filetypes', str_replace(',', ' ', $types));
+
+  return array();
+}

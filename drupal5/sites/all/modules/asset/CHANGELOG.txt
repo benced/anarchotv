@@ -1,0 +1,74 @@
+// $Id: CHANGELOG.txt,v 1.1.2.8 2008/09/09 21:18:21 wmostrey Exp $
+
+2008-09-09
+ - Integration with imagecache2
+ - Integration with lightbox2
+ - Better browser compatibility for asset wizard
+
+2008-07-24
+ - Integration with the media_mover module
+ - More usability improvements to the asset wizard
+ - #202656 migration path from imagefield, image, IMCE, .
+ - #227811 Auto-create 'images' and 'images/import' folders?
+ - #228110 asset_nodeapi submit does not contain node ID	
+ - #242389 Formatter defaults for teasers are not working
+ - #255986 public folders can not be accessed by users
+ - #273373 asset_import only importing images
+
+2008-05-20
+ - #246828: PostgreSQL support by pounard
+ - #255937: "Delete Asset" does not remove Asset from CCK node
+
+2008-04-25
+ - Improved user interface, especially differences between CCK asset wizard and textarea/TinyMCE asset wizard
+ - #227027: Internet Explorer javascript error
+ - #230990: Asset Wizard creates 2 rows on first directory creation
+ - #235051: Insert Assets link always shows, regardless of permissionss
+ - #251860: Files don't get deleted on server
+
+2007-12-18
+ - cck support
+ - panels support with the asset_panels module
+ - better support for i18n and multi-site
+ - GUI improvements
+ - flv support for asset_bonus module
+ - ability to edit/move/delete assets and folders
+ - add asset_import module
+ - improved imagecache support
+ - improved TinyMCE support
+ - lightbox support
+
+2007-06-28
+ - #155368: mp3 player admin page fixes
+ - reset the formatter cache on formatter defaults admin page
+ - $asset->title defaults to $asset->filename if title is empty
+ - hook_filter_tips()
+ - cleaned up asset_check_directory and consequently new folder process
+ - asset_pathinfo() function
+ - moved asset_build_query() to main module file
+
+2007-06-25
+ - #153479 mp3 player admin screen broken.
+ - Added asset_bonus_swf and asset_bonus_test_mp3 js settings.
+
+2007-06-14
+ - #150639: Allow users with administer assets permission access to all assets
+
+2007-06-13
+ - #151207 Only store asset filepath relative to file_directory_path (missed some files on previous commit)
+
+2007-06-12
+ - #151207 Only store asset filepath relative to file_directory_path
+ - #150582 by xulu, Documentation for asset bonus pack installation
+ 
+2007-06-05
+ - Added theme support
+ - cleaned up the workflow of the wizard
+ - solidified the API
+ - improved views integration
+ - asset_youtube module
+
+2007-05-25
+ - #144019: asset.install ignores table prefix (thanks guardian)
+
+ 

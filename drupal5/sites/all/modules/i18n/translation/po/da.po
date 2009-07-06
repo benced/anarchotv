@@ -1,0 +1,361 @@
+# Danish translation of Drupal (translation.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (translation.module) $Id: da.po,v 1.1.2.1 2007/09/12 08:09:14 wulff Exp $\n"
+"POT-Creation-Date: 2007-09-12 09:44+0200\n"
+"PO-Revision-Date: 2007-09-12 10:08+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: translation.module:26
+msgid "This module is part of i18n package and provides support for translation relationships."
+msgstr "Modulet er en del af 18n-pakken og understøtter forbindelser mellem oversættelser."
+
+#: translation.module:27
+msgid "The objects you can define translation relationships for are:"
+msgstr "Objekter, som du kan oprette forbindelser mellem:"
+
+#: translation.module:29
+msgid "Nodes."
+msgstr "Indholdselementer."
+
+#: translation.module:30
+msgid "Taxonomy Terms"
+msgstr "Taksonomi-ord"
+
+#: translation.module:32
+msgid "Additional features:"
+msgstr "Yderligere funktioner:"
+
+#: translation.module:34
+msgid "<i>Translations</i> block that looks like the language switcher provided by i18n module but also links to translations when available."
+msgstr "Oversættelsesblok der minder om 18n-modulets sprogvælger, men som også linker til oversættelser, når de er tilgængelige."
+
+#: translation.module:35
+msgid "Basic translation workflow and administration page for content translation."
+msgstr "Basal arbjedsgang og administrationsside for oversættelse af indhold."
+
+#: translation.module:36
+msgid "Links for node translations that can be displayed below each node, depending on module settings."
+msgstr "Links til oversættelser vises under hvert indholdselement, afhængigt af modulindstillinger."
+
+#: translation.module:38
+msgid "For more information please read the <a href=\"@i18n\">on-line help pages</a>."
+msgstr "Læs venligst <a href=\"@i18n\">online hjælpen</a> for yderligere information."
+
+#: translation.module:42
+msgid "<h2>Translations</h2>"
+msgstr "<h2>Oversættelser</h2>"
+
+#: translation.module:43
+msgid "<strong>translate nodes</strong> <p>This one, combined with create content permissions, will allow to create node translation</p>"
+msgstr "<strong>oversæt indhold</strong><p>Denne giver sammen med 'opret indhold' adgang til at oprette oversættelser af indhold.</p>"
+
+#: translation.module:57
+msgid "translation node autocomplete"
+msgstr "autofuldførelse"
+
+#: translation.module:64;86;95
+#: translation.info:0
+msgid "Translation"
+msgstr "Oversættelse"
+
+#: translation.module:72;157
+msgid "Translations"
+msgstr "Oversættelser"
+
+#: translation.module:73
+msgid "Manage content translations."
+msgstr "Håndter oversættelse af indhold"
+
+#: translation.module:77
+msgid "List"
+msgstr "Vis"
+
+#: translation.module:128
+msgid "Language Management"
+msgstr "Sproghåndtering"
+
+#: translation.module:130
+msgid "Interface language depends on content."
+msgstr "Grænsefladesprog afhænger af indhold."
+
+#: translation.module:130
+msgid "Interface language is independent"
+msgstr "Grænsefladesprog er uafhængigt"
+
+#: translation.module:131
+msgid "Whether the whole page should switch language when clicking on a node translation or not."
+msgstr "Angiver hvorvidt hele siden skal skifte sprog når en oversættelse vises."
+
+#: translation.module:135
+msgid "Links to node translations"
+msgstr "Links til oversat indhold"
+
+#: translation.module:137
+msgid "None."
+msgstr "Ingen."
+
+#: translation.module:137
+msgid "Main page only"
+msgstr "Kun hovedside"
+
+#: translation.module:137
+msgid "Teaser and Main page"
+msgstr "Smagsprøve og hovedside"
+
+#: translation.module:138
+msgid "Links from nodes to translated versions."
+msgstr "Links fra indhold til oversættelser"
+
+#: translation.module:142;221
+msgid "Translation workflow"
+msgstr "Arbejdsgang for oversættelse"
+
+#: translation.module:144
+msgid "Disabled"
+msgstr "Deaktiveret"
+
+#: translation.module:144
+msgid "Enabled"
+msgstr "Aktiveret"
+
+#: translation.module:145
+msgid "If enabled some worklow will be provided for content translation."
+msgstr "Aktiver arbejdsgange for oversættelse af indhold."
+
+#: translation.module:160
+msgid "Languages"
+msgstr "Sprog"
+
+#: translation.module:195
+msgid "Language cannot be changed while creating a translation."
+msgstr "Sproget kan ikke skiftes mens oversættelsen oprettes."
+
+#: translation.module:211
+msgid "Language and translations"
+msgstr "Sprog og oversættelser"
+
+#: translation.module:223
+msgid "Use the translation workflow to keep track of content that needs translation."
+msgstr "Brug arbejdsgangen til at holde styr på indhold, der skal oversættes."
+
+#: translation.module:236
+msgid "Files from translated content"
+msgstr "Filer fra oversat indhold"
+
+#: translation.module:241
+msgid "You can remove the files for this translation or keep the original files and translate the description."
+msgstr "Du kan fjerne filer fra oversættelsen eller beholde de originale filer og oversætte beskrivelserne."
+
+#: translation.module:420
+msgid "You need to set a language before creating a translation."
+msgstr "Du skal vælge et sprog før du kan oprette en oversættelse."
+
+#: translation.module:431;741
+msgid "Remove"
+msgstr "Fjern"
+
+#: translation.module:453
+msgid "Select translation for %language"
+msgstr "Vælg oversættelse for %language"
+
+#: translation.module:457
+msgid "Search for node"
+msgstr "Søg efter indholdselement"
+
+#: translation.module:458
+msgid "Enter node id or title"
+msgstr "Indtast node id eller titel"
+
+#: translation.module:464
+msgid "Or select from the list"
+msgstr "eller vælg fra listen"
+
+#: translation.module:468;907;992
+msgid "Save"
+msgstr "Gem"
+
+#: translation.module:548
+msgid "published"
+msgstr "udgivet"
+
+#: translation.module:548
+msgid "not published"
+msgstr "ikke udgivet"
+
+#: translation.module:551
+msgid "edit translation"
+msgstr "rediger oversættelse"
+
+#: translation.module:557;720
+msgid "create translation"
+msgstr "opret oversættelse"
+
+#: translation.module:558;723
+msgid "select node"
+msgstr "vælg indholdselement"
+
+#: translation.module:614
+msgid "And translation conditions are"
+msgstr "Og oversættelsesbetingelserne er"
+
+#: translation.module:619
+msgid "source language"
+msgstr "kildesprog"
+
+#: translation.module:621
+msgid "source status"
+msgstr "kildestatus"
+
+#: translation.module:623
+msgid "translation language"
+msgstr "oversættelsessprog"
+
+#: translation.module:625
+msgid "translation status"
+msgstr "oversættelsesstatus"
+
+#: translation.module:627;649
+msgid "Filter"
+msgstr "Filter"
+
+#: translation.module:629;655
+msgid "Reset"
+msgstr "Gendan"
+
+#: translation.module:667;709;1221
+msgid "Language"
+msgstr "Sprog"
+
+#: translation.module:667;709;1221
+msgid "Title"
+msgstr "Titel"
+
+#: translation.module:667
+msgid "Type"
+msgstr "Type"
+
+#: translation.module:667
+msgid "Author"
+msgstr "Forfatter"
+
+#: translation.module:667;709
+msgid "Status"
+msgstr "Status"
+
+#: translation.module:667
+msgid "Translation status"
+msgstr "Oversættelsesstatus"
+
+#: translation.module:667;934
+msgid "Operations"
+msgstr "Handlinger"
+
+#: translation.module:685
+msgid "No posts available."
+msgstr "Ingen tilgængelige indlæg."
+
+#: translation.module:709
+msgid "Options"
+msgstr "Valg"
+
+#: translation.module:717
+msgid "Published"
+msgstr "Udgivet"
+
+#: translation.module:717
+msgid "Not published"
+msgstr "Ikke udgivet"
+
+#: translation.module:719
+msgid "Not translated"
+msgstr "Ikke oversat"
+
+#: translation.module:730
+msgid "Current translations"
+msgstr "Nuværende oversættelser"
+
+#: translation.module:738
+msgid "Remove from translation"
+msgstr "Fjern fra oversættelse"
+
+#: translation.module:739
+msgid "This will just unlink the node from this translation set."
+msgstr "Fjerne forbindelsen til denne oversættelsesgruppe."
+
+#: translation.module:761
+msgid "<p>No nodes available in %language</p>"
+msgstr "<p>Intet indhold tilgængeligt på %language</p>"
+
+#: translation.module:787
+msgid "The translation has been saved"
+msgstr "Oversættelse gemt"
+
+#: translation.module:802
+msgid "Removed translation information from term"
+msgstr "Oversættelsesoplysninger fjerne fra ord"
+
+#: translation.module:909
+msgid "Edit term translations"
+msgstr "Rediger oversættelser af ord"
+
+#: translation.module:912;913
+msgid "Submit"
+msgstr "Indsend"
+
+#: translation.module:956
+msgid "edit"
+msgstr "rediger"
+
+#: translation.module:960
+msgid "new translation"
+msgstr "ny oversættelse"
+
+#: translation.module:1002
+msgid "Term translations have been updated"
+msgstr "Oversættelser af ord opdateret."
+
+#: translation.module:1182
+msgid "None"
+msgstr "Ingen"
+
+#: translation.module:1183
+msgid "Source content (to be translated)"
+msgstr "Kildeindhold (skal oversættes)"
+
+#: translation.module:1184
+msgid "Translation in progress"
+msgstr "Oversættelse i gang"
+
+#: translation.module:1185
+msgid "Translated content"
+msgstr "Oversat indhold"
+
+#: translation.module:1186
+msgid "Source updated (to update translation)"
+msgstr "Kilde opdateret (opdater oversættelse)"
+
+#: translation.module:119
+msgid "translate nodes"
+msgstr "oversat indhold"
+
+#: translation.module:0
+msgid "translation"
+msgstr "oversættelse"
+
+#: translation.info:0
+msgid "Manages translations between nodes and taxonomy terms."
+msgstr "Håndterer oversættelser mellem indholdselementer og taksonomi-termer."
+
+#: translation.info:0
+msgid "Multilanguage - i18n"
+msgstr "Flere sprog - i18n"
+

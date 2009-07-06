@@ -1,0 +1,40 @@
+/* $Id: changelog.txt,v 1.11 2008/05/11 04:11:55 alexua Exp $ */
+2008-05-20
+#254028 - bangpound fixed regex problem with Picassa to support new address for images
+
+2008-02-19
+fix error in flickr when importing (args)
+
+2008-02-17
+add provider views handlers
+
+2007-12-18
+alerts when flickr api is missing (when uploading flickr content)
+
+2007-11-07
+add support for picasa -- thanks alexua!
+
+2007-10-08
+make sure xml in data knows whether an array is returned for tags
+
+2007-10-05
+add support for importing flickr photosets
+
+2007-08-31
+fixed image h/w 0 in IE: http://drupal.org/node/170854
+fixed default h/w: http://drupal.org/node/167497
+
+2007-08-18
+added imageshack support
+added photobucket support
+
+2007-07-27
+ignore case when matching providers
+
+2007-06-19
+allow w/h of 0 (for scalable photos)
+change flickr request call to unserialize data
+add $module calls to ncck hooks
+
+2007-06-13
+begin writing module

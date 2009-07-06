@@ -1,0 +1,274 @@
+# Danish translation of Drupal (i18n.module)
+# Copyright 2006-2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (i18n.module) $Id: da.po,v 1.2.2.1 2007/09/12 07:22:13 wulff Exp $\n"
+"POT-Creation-Date: 2006-10-04 11:53+0200\n"
+"PO-Revision-Date: 2007-09-12 09:21+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: i18n.module:55
+msgid "Language switcher"
+msgstr "Sprogvælger"
+
+#: i18n.module:58
+msgid "Languages"
+msgstr "Sprog"
+
+#: i18n.module:110
+msgid "This module provides support for multilingual content in Drupal sites:"
+msgstr "Modulet understøtter flersproget indhold på Drupal-sites:"
+
+#: i18n.module:112
+msgid "Translation of the user interface for anonymous users (combined with locale)"
+msgstr "Oversættelse af brugergrænsefladen for anonyme brugere (i kombination med locale)"
+
+#: i18n.module:113
+msgid "Multi-language for content. Adds a language field for nodes and taxonomy vocabularies and terms"
+msgstr "Flersproget indhold. Tilføjer et sprog-felt til indholdselementer, taksonomier og termer."
+
+#: i18n.module:114
+#: ;279
+msgid "Browser language detection"
+msgstr "Genkend browser-sprog"
+
+#: i18n.module:115
+msgid "Keeps the language setting accross consecutive requests using URL rewriting"
+msgstr "Beholder sprogindstilling på tværs af forespørgsler ved hjælp af URL-omskrivning."
+
+#: i18n.module:116
+msgid "Provides a block for language selection and two theme functions: <i>i18n_flags</i> and <i>i18n_links</i>"
+msgstr "Tilbyder en blok til sprogvalg og to teme-funktioner: <em>i18n_flags</em> and <em>i18n_links</em>"
+
+#: i18n.module:117
+msgid "Support for long locale names"
+msgstr "Understøttelse af lange navne på lokaliteter"
+
+#: i18n.module:118
+msgid "Multilingual menu items"
+msgstr "Flersprogede menupunkter"
+
+#: i18n.module:120
+msgid "For more information please read the <a href=\"@i18n\">on-line help pages</a>."
+msgstr "Læs <a href=\"@i18n\">online hjælpen</a> for yderligere information."
+
+#: i18n.module:123
+msgid "To enable multilingual support for specific content types go to !configure_content_types."
+msgstr "Aktiver understøttelse af flere sprog for hver indholdstype på !configure_content_types."
+
+#: i18n.module:123
+msgid "configure content types"
+msgstr "konfigurer indholdstyper"
+
+#: i18n.module:137
+msgid "Multilingual system"
+msgstr "Understøttelse af flere sprog"
+
+#: i18n.module:138
+msgid "Configure multilingual content and translation."
+msgstr "Konfigurer flersproget indhold og oversættelse"
+
+#: i18n.module:145
+#: i18n.info:0
+msgid "Internationalization"
+msgstr "Internationalisering"
+
+#: i18n.module:149
+#: ;275
+msgid "Manage languages"
+msgstr "Håndter sprog"
+
+#: i18n.module:150
+msgid "Configure languages."
+msgstr "Konfigurer sprog."
+
+#: i18n.module:194
+msgid "The menu item %title has been updated with node language."
+msgstr "Menupunktet %title opdateret med sprog fra indholdselement."
+
+#: i18n.module:198
+msgid "The menu item %title has been added with node language."
+msgstr "Menupunktet %title tilføjet med sprog fra indholdselement."
+
+#: i18n.module:246
+msgid "Reset language for all terms."
+msgstr "Nulstil sprog for alle ord."
+
+#: i18n.module:275
+msgid "No languages enabled. Visit the !locale_admin page to set up your languages."
+msgstr "Intet sprog aktiveret. Gå til !locale_admin for at konfigurere sprog."
+
+#: i18n.module:281
+#: ;650
+msgid "Disabled"
+msgstr "Deaktiveret"
+
+#: i18n.module:281
+#: ;932
+msgid "Enabled"
+msgstr "Aktiveret"
+
+#: i18n.module:282
+msgid "User browser language for home page and links without language prefix."
+msgstr "Brug browserindstillinger for forside og links uden sprogangivelse."
+
+#: i18n.module:288
+msgid "Language icons settings"
+msgstr "Sprogikon"
+
+#: i18n.module:294
+msgid "Language icons path"
+msgstr "Sti til sprogikoner"
+
+#: i18n.module:298
+msgid "Path for language icons, relative to Drupal installation. '*' is a placeholder for language code."
+msgstr "Sti til sprogikoner relativt til Drupal installationen. '*' erstattes med sprogkoden."
+
+#: i18n.module:302
+msgid "Language icons size"
+msgstr "Størrelsese af sprogikoner"
+
+#: i18n.module:306
+msgid "Image size for language icons, in the form \"width x height\"."
+msgstr "Billedstørrelse af sprogikoner på formen \"bredde x højde\"."
+
+#: i18n.module:312
+msgid "Advanced settings"
+msgstr "Avancerede indstillinger"
+
+#: i18n.module:318
+msgid "Content selection mode"
+msgstr "Valg af indhold"
+
+#: i18n.module:321
+msgid "Determines which content to show depending on language."
+msgstr "Bestemmer hvilket indhold der vises baseret på sproget."
+
+#: i18n.module:640
+msgid "Only current language and no language"
+msgstr "Kun aktuelle sprog og intet sprog"
+
+#: i18n.module:641
+msgid "Only current and default languages and no language"
+msgstr "Kun aktuelle sprog, standardsprog og intet sprog"
+
+#: i18n.module:642
+msgid "Only default language and no language"
+msgstr "Kun standardsprog og intet sprog"
+
+#: i18n.module:643
+msgid "Only current language"
+msgstr "Kun aktuelle sprog"
+
+#: i18n.module:644
+msgid "All content. No language conditions apply"
+msgstr "Alt indhold. Ingen sprogbegrænsninger."
+
+#: i18n.module:651
+msgid "Normal - All enabled languages will be allowed."
+msgstr "Normal - Alle aktive sprog tillades."
+
+#: i18n.module:652
+msgid "Extended - All defined languages will be allowed."
+msgstr "Udvidet - alle definerede sprog tillades."
+
+#: i18n.module:811
+#: ;827
+msgid "Multilingual options"
+msgstr "Indstillinger for flere sprog"
+
+#: i18n.module:812
+msgid "This language will be set for all terms in this vocabulary"
+msgstr "Sproget vælges for alle ord i ordforrådet."
+
+#: i18n.module:831
+msgid "Multilingual content"
+msgstr "Flersproget indhold"
+
+#: i18n.module:834
+msgid "Enables language field and translations for this content type."
+msgstr "Aktiver sprogfelt og oversættelser for denne indholdstype."
+
+#: i18n.module:867
+msgid "You can set a language for this menu item."
+msgstr "Du kan angive et sprog for menupunktet."
+
+#: i18n.module:876
+msgid "Multilingual settings"
+msgstr "Indstillinger"
+
+#: i18n.module:879
+msgid "If you change the Language, you must click on <i>Preview</i> to get the right Categories &amp; Terms for that language."
+msgstr "Hvis du ændrer sproget skal du klikke på <em>gennemse</em> for at få vist de korrekte kategorier."
+
+#: i18n.module:929
+msgid "n/a"
+msgstr "n/a"
+
+#: i18n.module:929
+msgid "delete"
+msgstr "slet"
+
+#: i18n.module:932
+msgid "Code"
+msgstr "Kode"
+
+#: i18n.module:932
+msgid "English name"
+msgstr "Engelsk navn"
+
+#: i18n.module:932
+msgid "Native name"
+msgstr "Lokalt navn"
+
+#: i18n.module:932
+msgid "Default"
+msgstr "Standard"
+
+#: i18n.module:932
+msgid "RTL"
+msgstr "RTL"
+
+#: i18n.module:932
+msgid "Translated"
+msgstr "Oversat"
+
+#: i18n.module:932
+msgid "Operations"
+msgstr "Handlinger"
+
+#: i18n.module:964
+msgid "This is a multilingual variable."
+msgstr "Dette er en flersproget variabel."
+
+#: i18n.module:980
+msgid "Reset to defaults"
+msgstr "Gendan standarder"
+
+#: i18n.module:1104
+msgid "Language"
+msgstr "Sprog"
+
+#: i18n.module:911
+msgid "administer all languages"
+msgstr "administrer alle sprog"
+
+#: i18n.module:0
+msgid "i18n"
+msgstr "i18n"
+
+#: i18n.info:0
+msgid "Enables multilingual content."
+msgstr "Aktiverer flersproget indhold."
+
+#: i18n.info:0
+msgid "Multilanguage - i18n"
+msgstr "Flere sprog - i18n"
+

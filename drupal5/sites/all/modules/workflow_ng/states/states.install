@@ -1,0 +1,108 @@
+<?php
+// $Id: states.install,v 1.1.2.2 2007/12/29 19:50:26 fago Exp $
+
+/*
+ * Implementation of hook_install()
+ */
+function states_install() {
+
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      db_query("CREATE TABLE if not exists {node_state} (
+        nid int unsigned NOT NULL,
+        vid int unsigned NOT NULL,
+        machine varchar(63) NOT NULL,
+        state varchar(127),
+        PRIMARY KEY (vid, machine),
+        KEY nid (nid)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      db_query("CREATE TABLE if not exists {users_state} (
+        uid int unsigned NOT NULL default '0',
+        machine varchar(63) NOT NULL,
+        state varchar(127),
+        PRIMARY KEY (uid, machine)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      db_query("CREATE TABLE if not exists {states_custom} (
+        sid int unsigned NOT NULL auto_increment,
+        label varchar(127),
+        entity_type int unsigned NOT NULL default '0',
+        entity_filter longtext NOT NULL,
+        states longtext NOT NULL,
+        init_state varchar(127),
+        PRIMARY KEY (sid)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {node_state} (
+        nid int_unsigned NOT NULL,
+        vid serial CHECK (vid >= 0),
+        machine varchar(63) NOT NULL,
+        state varchar(127),
+        PRIMARY KEY(vid, machine)
+      )");
+      db_query("CREATE INDEX {node_state}_nid_idx ON {node_state} (nid)");
+      db_query("CREATE TABLE {users_state} (
+        uid int_unsigned NOT NULL default '0',
+        machine varchar(63) NOT NULL,
+        state varchar(127),
+        PRIMARY KEY (uid, machine)
+      )");
+      db_query("CREATE TABLE {states_custom} (
+        sid serial CHECK (sid >= 0),
+        label varchar(127),
+        entity_type int_unsigned NOT NULL default '0',
+        entity_filter text NOT NULL,
+        states text NOT NULL,
+        init_state varchar(127),
+        PRIMARY KEY (sid)
+      )");
+      break;
+    default:
+      break;
+  }
+}
+
+/*
+ * Due to the addition of web interface configurable states, a new table is required
+ */
+function states_update_5001() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      db_query("CREATE TABLE if not exists {states_custom} (
+        sid int unsigned NOT NULL auto_increment,
+        label varchar(127),
+        entity_type int unsigned NOT NULL default '0',
+        entity_filter longtext NOT NULL,
+        states longtext NOT NULL,
+        init_state varchar(127),
+        PRIMARY KEY (sid)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {states_custom} (
+        sid serial CHECK (sid >= 0),
+        label varchar(127),
+        entity_type int_unsigned NOT NULL default '0',
+        entity_filter text NOT NULL,
+        states text NOT NULL,
+        init_state varchar(127),
+        PRIMARY KEY (sid)
+      )");
+      break;
+    default:
+      break;
+  }
+  return array();
+}
+
+/*
+ * Implementation of hook_uninstall()
+ */
+function states_uninstall() {
+  db_query("DROP TABLE {node_state}");
+  db_query("DROP TABLE {users_state}");
+  db_query("DROP TABLE {states_custom}");
+  variable_del('state_machines');
+}

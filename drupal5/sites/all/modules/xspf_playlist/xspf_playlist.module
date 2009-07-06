@@ -1,0 +1,379 @@
+<?php
+
+// $Id: xspf_playlist.module,v 1.26.2.41 2008/12/19 19:48:46 arthuregg Exp $
+
+/* ******************************************************* */
+/* DRUPAL FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * Implementation of hook_menu().
+ */
+function xspf_playlist_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array (
+      'path' => 'admin/settings/xspf-playlist',
+      'title' => t('XSPF playlist settings'),
+      'description' => t('Settings for the xspf playlist module.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('xspf_playlist_admin_settings'),
+      'access' => user_access('administer xspf_playlist'),
+    );
+  }
+
+  return $items;
+}
+
+
+/**
+ * Menu callback for administrative settings.
+ */
+function xspf_playlist_admin_settings($content_type = null) {
+  $form = array();
+
+	if (! $content_type) {
+
+	  $form['settings'] = array(
+	    '#type' => 'fieldset',
+	    '#title' => t('Settings'),
+	  );
+
+	  $form['settings']['xspf_playlist_title'] = array(
+	    '#type' => 'textfield',
+	    '#title' => t('Default playlist title'),
+	    '#default_value' => variable_get('xspf_playlist_title', t('!sitename playlist', array('!sitename' =>  variable_get('site_name', 'Drupal')))),
+	    '#description' => t('Displayed on playlist.'),
+	  );
+
+	  $form['settings']['xspf_playlist_info'] = array(
+	    '#type' => 'textfield',
+	    '#title' => t('Default playlist info'),
+	    '#default_value' => variable_get('xspf_playlist_info', ''),
+	    '#description' => t('Information about this playlist. Some players will display this information')
+	  );
+
+	  $form['settings']['xspf_playlist_filetypes'] = array(
+	    '#type' => 'textfield',
+	    '#title' => t('File type support'),
+	    '#default_value' => variable_get('xspf_playlist_filetypes', 'flv jpg gif png mp3'),
+	    '#description' =>t('Will only use attached files of these file types. Space separated list.'),
+	  );
+  }
+  // display for specific content types
+  else {
+    // specifc settings
+    $form['display'] = array(
+      '#value' => t('You can configure individual content type settings here'),
+      '#type' => 'markup',
+    );
+  	$form['content_type'] = array(
+  	  '#type' => 'value',
+  	  '#value' => $content_type,
+  	);
+  }
+
+  $form = system_settings_form($form);
+  // Set a high weight to facilitate other modules adding items above the buttons.
+  $form['buttons']['#weight'] = 5;
+
+  return $form;
+}
+
+
+/**
+ * Implementation of hook_perm().
+ */
+function xspf_playlist_perm() {
+  return array('administer xspf_playlist');
+}
+
+/* ******************************************************* */
+/* xspf_playlist FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * fires a module action
+ * @param $hook is the hook name
+ * @param $op is the operator to call
+ * @param $node is a drupal node object
+ * @param $config
+ * @return array
+ */
+function xspf_playlist_extend($hook, $op, $node, $config) {
+  foreach (module_implements($hook) as $module) {
+    if ($data = module_invoke($module, $hook, $op, $node, $config)) {
+      $ret[] = $data;
+    }
+  }
+  return $ret;
+}
+
+
+/**
+ * fires a module action
+ * @param $hook is the hook name
+ * @param $op is the operator to call
+ * @param $node is a drupal node object
+ * @param $config
+ * @return array
+ */
+function xspf_playlist_invoke_fire($hook, $op, $node = NULL, $config) {
+  // split the config data up
+  list($module_name, $seperator, $config) = split('[--]', $config);
+
+  if (module_exists($module_name)) {
+    if ($output = module_invoke($module_name, $hook, $op, $node, $config)) {
+      return $output;
+    }
+  }
+}
+
+
+/**
+ * Helper function to return the value of a given key for a playlist item.
+ *
+ * @param array $item
+ *   A playlist item.
+ * @param string $key
+ *   The key to find a value for.
+ * @return string
+ *   The key's value, if found.
+ */
+function _xspf_playlist_item_get_value($item, $key) {
+  foreach ($item as $attribute) {
+    if (isset($attribute['key']) && $attribute['key'] == $key && isset($attribute['value'])) {
+      return $attribute['value'];
+    }
+  }
+}
+
+/**
+ * Helper function to set the value of a given key for a playlist item.
+ *
+ * @param array $item
+ *   A playlist item.
+ * @param string $key
+ *   The key to set a value for.
+ * @param string $value
+ *   The value to set the key to.
+ */
+function _xspf_playlist_item_set_value(&$item, $key, $value) {
+  // Set any existing
+  foreach ($item as $index => $attribute) {
+    if (isset($attribute['key']) && $attribute['key'] == $key) {
+      $item[$index]['value'] = $value;
+      return;
+    }
+  }
+  // If there was no existing attribute with the key, create a new one.
+  $item[] = array(
+    'key' => $key,
+    'value' => $value,
+  );
+}
+
+/**
+ * helper function for the playlist configuration info
+ * should probably be an admin setting
+ */
+function xspf_playlist_configuration() {
+  $configuration = array(
+    'title' => variable_get('xspf_playlist_title', t('My playlist')),
+    'info' => variable_get('xspf_playlist_info', ''),
+    'link' => url(null, null, null, true),
+    'annotation' => variable_get('xspf_playlist_info', ''),
+  );
+  return $configuration;
+}
+
+
+/**
+ * Adaptation of Drupal 6 drupal_alter().
+ *
+ * Simplified because we don't need additional arguments passed by reference.
+ *
+ * @TODO: remove in the D6 upgrade.
+ */
+function xspf_playlist_alter($type, &$data) {
+  // Hang onto a reference to the data array so that it isn't blown away later.
+  // Also, merge in any parameters that need to be passed by reference.
+  $args = array(&$data);
+
+  // Now, use func_get_args() to pull in any additional parameters passed into
+  // the drupal_alter() call.
+  $additional_args = func_get_args();
+  array_shift($additional_args);
+  array_shift($additional_args);
+  $args = array_merge($args, $additional_args);
+  foreach (module_implements($type .'_alter') as $module) {
+    $function = $module .'_'. $type .'_alter';
+    call_user_func_array($function, $args);
+  }
+}
+
+/**
+ * Build a playlist item by passing it through altering.
+ *
+ * @param array $item
+ *   The playlist item.
+ * @param object $object
+ *   An object with which the playlist item is associated.
+ * @param string $url
+ *   The url to a file that is being added to the items array.
+ * @param string $thumb
+ *   A thumbnail path string.
+ * @param array $meta
+ *   Metadata associated with the item.
+ */
+function xspf_playlist_build_item(&$item, $object, $url, $thumb, $meta) {
+  // TODO: update to drupal_alter() for D6.
+  xspf_playlist_alter('xspf_playlist_item', $item, $object, $url, $thumb, $meta);
+}
+
+/**
+ * Build a playlist list by passing it through altering.
+ *
+ * @param array $playlist
+ *   An array of configuration data.
+ * @param string $type
+ *   A type of object for which the playlist is being constructed, e.g., 'node', 'view'.
+ * @param string $subtype
+ *   A subtype for the object type. Used for node types.
+ * @param object or array $object
+ *   An object (e.g., node, view) for which the playlist is being constructed.
+ * @param object $node
+ *   A drupal node object
+ */
+function xspf_playlist_build_list(&$playlist, $type = NULL, $subtype = NULL, $object = NULL) {
+  // TODO: update to drupal_alter() for D6.
+  xspf_playlist_alter('xspf_playlist_list', $playlist, $type, $subtype, $object);
+
+  // Check configuration to see how thumbnails should be handled.
+  if ('type' == 'node' && $subtype && variable_get('xspf_' . $subtype . '_thumb_first', FALSE)) {
+    $background = xspf_playlist_url(drupal_get_path('module', 'xspf_playlist') . '/background.png');
+    // Add a background to the first item.
+    $playlist['items'][key($playlist['items'])][] = array('key' => 'thumbnail', 'value' => $background);
+  }
+}
+
+/**
+ * checks filemimes
+ * @return true
+ */
+function _xspf_playlist_filetype_supported($filetype) {
+  $allowed = variable_get('xspf_playlist_filetypes', 'flv jpg gif png mp3');
+  $pattern = "/$filetype/i";
+  preg_match($pattern, $allowed, $matches);
+  if ($matches) { return true; }
+}
+
+/**
+ * Build urls for links to various things.
+ *
+ * This function wraps Drupal's core url() function to enable a custom base URL
+ * for xspf_playlist links.
+ *
+ * @param string $path is a path, no leading /
+ * @return url
+ */
+function xspf_playlist_url($path, $custom_base_url = NULL) {
+  // Fetch a custom base URL, if present.
+  $custom_base_url = variable_get('xspf_playlist_base_url', $GLOBALS['base_url']);
+
+  // NOTE: doing it this way because i18n gets in the way url()
+  $url = $custom_base_url .'/'. $path;
+
+  // Restore the cached $base_url value.
+  $base_url = $cached;
+  return $url;
+}
+
+
+/**
+ * Create an XML playlist file.
+ *
+ * @param array $playlist
+ *   An array of configuration data.
+ * @param string $type
+ *   A type of object for which the playlist is being constructed, e.g., 'node', 'view'.
+ * @param string $subtype
+ *   A subtype for the object type. Used for node types.
+ * @param object or array $object
+ *   An object (e.g., node, view) for which the playlist is being constructed.
+ *
+ * @return string
+     XML output for a playlist.
+ */
+function xspf_playlist_list($playlist, $type = NULL, $subtype = NULL, $object = NULL) {
+  $items = $playlist['items'];
+  unset($playlist['items']);
+  $output = array();
+  $output[] = '<playlist version="1" xmlns="http://xspf.org/ns/0/">';
+  $output[] = format_xml_elements($playlist) . '<trackList>';
+
+  if (!empty($items)) {
+    foreach($items as $item){
+      // Add another item.
+      $output[] = xspf_playlist_item($item);
+    }
+  }
+  $output[] = '</trackList>';
+  $output[] = '</playlist>';
+
+  return implode("\n", $output);
+}
+
+
+/**
+ * Create a playlist item for an xml file.
+ *
+ * @param array $item
+ *   Keys are:
+ *   - 'key': the tag name.
+ *   - 'value': the tag value.
+ *   - 'attributes': an array of attributues, e.g., array('rel' => 'rel')) to be applied
+ *     to the tag. Will be run through drupal_attributes().
+ * @return
+ *   An XML string.
+ */
+function xspf_playlist_item($item) {
+  $output = array();
+  $output[] = '<track>';
+  $output[] = format_xml_elements($item) . '</track>';
+  return implode("\n", $output);
+}
+
+/**
+ * Build and render a playlist XML file.
+ *
+ * @param array $playlist
+ *   A playlist.
+ * @param string $type
+ *   is the alter type
+ * @param object $node
+ *   is a node being acted on
+ */
+function xspf_playlist_render($playlist = array(), $type = NULL, $subtype = NULL, $object = NULL) {
+  drupal_set_header('Content-Type: text/xml; charset=utf-8');
+  // Load a default configuration and then override it with any custom data.
+  $playlist = array_merge(xspf_playlist_configuration(), $playlist);
+  // Build the playlist.
+  xspf_playlist_build_list($playlist, $type, $subtype, $object);
+  print xspf_playlist_list($playlist, $type, $subtype, $object);
+}
+
+/* ******************************************************* */
+/* THEME FUNCTIONS */
+/* ******************************************************* */
+
+/**
+ * creates the potential for overriding this
+ * @param $node is a node object
+ * @return string
+ */
+function theme_xspf_playlist_info($node) {
+  return variable_get('xspf_playlist_info', '');
+}
+

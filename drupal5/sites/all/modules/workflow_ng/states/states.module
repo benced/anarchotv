@@ -1,0 +1,443 @@
+<?php
+
+// $Id: states.module,v 1.1.2.8 2007/12/29 19:50:26 fago Exp $
+
+/**
+ * @file
+ * Provides configurable state machines for other modules.
+ */
+
+if (module_exists('views')) {
+  include_once(drupal_get_path('module', 'states') .'/states_views.inc');
+}
+if (module_exists('workflow_ng')) {
+  include_once(drupal_get_path('module', 'states') .'/states_workflow_ng.inc');
+}
+include_once(drupal_get_path('module', 'states') .'/states_admin.inc');
+
+/*
+ * Returns all defined state machines
+ * @param $op Set it to 'names' to get a list of state machine names,
+ *            to 'node' to get node machines grouped by type,
+ *            to 'user' to get a full definition list of machines for users,
+ *            otherwise you'll get the full definitions
+ * @param $key If set, only return the value for this key. E.g. $op 'labels', with key 'example'
+ *   will return the label of the machine example
+ * @param $reset Whether the static cache of this function shall be resetted. If you want to reset
+ *   the whole state machine cache use a call to states_clear_machine_cache() instead
+ */
+function states_get_machines($op = 'all', $key = NULL, $reset = FALSE) {
+  static $machines;
+
+  if (!isset($machines) || $reset) {
+    $machines = array('node' => array(), 'user' => array(), 'labels' => array(), 'all' => array());
+
+    if (($returned = variable_get('state_machines', -1)) == -1) {
+      $returned = _states_build_machines_cache();
+    }
+    foreach ($returned as $name => $info) {
+      $machines['labels'][$name] = $info['#label'];
+      $machines['all'][$name] = $info;
+      if ($info['#entity'] == 'node') {
+        $types = $info['#types'] ? $info['#types'] : array_keys(node_get_types('names'));
+        foreach ($types as $type) {
+          $machines['node'][$type][$name] = $info;
+        }
+      }
+      else if ($info['#entity'] == 'user') {
+        $machines['user'][$name] = $info;
+      }
+    }
+    asort($machines['labels']);
+  }
+
+  if (!in_array($op, array('all', 'node', 'user', 'labels'))) {
+    $op = 'all';
+  }
+  if (!isset($key)) {
+    return $machines[$op];
+  }
+  else {
+    return $machines[$op][$key];
+  }
+}
+
+/*
+ * Rebuilds the list of defined state machines
+ */
+function _states_build_machines_cache() {
+  if (($old_data = variable_get('state_machines', -1)) != -1) {
+    states_entity_initiate_new_init_states($old_data);
+  }
+  $data = module_invoke_all('states');
+  variable_set('state_machines', $data);
+  if ($old_data != -1) {
+    states_entity_initiate_new_init_states($data);
+  }
+  return $data;
+}
+
+/*
+ * Clears the machine definition cache
+ */
+function states_clear_machine_cache() {
+  _states_build_machines_cache();
+  states_get_machines('all', NULL, TRUE);
+  if (module_exists('workflow_ng')) {
+    workflow_ng_clear_cache();
+  }
+}
+
+
+
+/*
+ * Implementation of hook_nodeapi()
+ */
+function states_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
+  //load all states for this node
+  if ($op == 'load') {
+    $machines = states_get_machines('node');
+    if ($machines[$node->type]) {
+      $data = array('states' => array());
+      $result = db_query("SELECT * FROM {node_state} WHERE vid = %d", $node->vid);
+      while ($row = db_fetch_object($result)) {
+        $data['states'][_states_machine_get_attribute_name($row->machine)] = $row->state;
+      }
+      return $data;
+    } 
+  }
+  else if ($op == 'insert') {
+    $machines = states_get_machines('node');
+    if ($machines[$node->type]) {
+      foreach($machines[$node->type] as $name => $info) {
+        if (isset($info['#init_state']) && (!is_array($node->states) || !in_array(_states_machine_get_attribute_name($name), array_keys($node->states)))) {         
+          states_machine_set_state($node, $name, $info['#init_state'], FALSE);
+        }
+        else {
+          $state = states_entity_get_machine_state($node, $name);
+          states_machine_set_state($node, $name, $state, FALSE);
+        }
+      }
+    }
+  }
+  //save all defined states in the database
+  else if ($op == 'update' && $node->states) {
+    $machines = states_get_machines('node');
+    if ($machines[$node->type]) {
+      foreach($machines[$node->type] as $name => $info) {
+        $state = states_entity_get_machine_state($node, $name);         
+        states_machine_set_state($node, $name, $state, FALSE);
+      }
+    }
+  }
+  else if ($op == 'delete') {
+    db_query("DELETE FROM {node_state} WHERE nid = %d", $node->nid);
+  }
+  else if ($op == 'delete revision') {
+    db_query("DELETE FROM {node_state} WHERE vid = %d", $node->vid);
+  }
+}
+
+
+/**
+ * Implementation of hook_user().
+ */
+function states_user($op, &$edit, &$user, $category = NULL) {
+  switch ($op) {
+    case 'load':
+      if (states_user_has_machines($user) && !isset($user->states_loaded)) {
+        $user->states = array();
+        $result = db_query("SELECT * FROM {users_state} WHERE uid = %d", $user->uid);
+        while ($row = db_fetch_object($result)) {
+          states_entity_set_machine_state($user, $row->machine, $row->state);
+        }
+        $user->states_loaded = TRUE;
+      } 
+      break;
+    case 'insert':
+      /*
+       * Roles aren't set correctly yet!
+       * Fix this manually!
+       */
+      if (is_array($edit['roles'])) {
+        $user->roles = $user->roles + drupal_map_assoc($edit['roles']);
+      }
+      if ($machines = states_user_has_machines($user)) {
+        foreach ($machines as $name => $info) {
+          if (isset($info['#init_state'])) {
+            $attribute = _states_machine_get_attribute_name($name);
+            if (!isset($edit['states'][$attribute])) {
+              states_machine_set_state($user, $name, $info['#init_state'], FALSE);
+            }
+          }
+        }
+      }
+     //proceed       
+    case 'update':
+      if(($machines = states_user_has_machines($user)) && $edit['states']) {
+        foreach($machines as $name => $info) {
+          $attribute = _states_machine_get_attribute_name($name);
+          if (isset($edit['states'][$attribute])) {
+            states_machine_set_state($user, $name, $edit['states'][$attribute], FALSE);
+          }
+        }
+        unset($edit['states']);
+        unset($edit['states_loaded']);
+      }    
+      break;
+    case 'delete':
+      db_query("DELETE FROM {users_state} WHERE uid = %d", $user->uid);
+      break;
+  }
+}
+
+/*
+ * Sets the state of the given machine for this entity to the given new state
+ * This function will generate a new event for the state change and return
+ * the modified entity object, if the operation was successfull, otherwise NULL 
+ * will be returned
+ * 
+ * @param $entity Either a node or a user object
+ * @param $machine_name The machine readable state machine name
+ * @param $state The value to set for the state machine
+ * @param $manual If, this function is manually called. Automatic calls (nodeapi, hook user) set this to FALSE.
+ */
+function states_machine_set_state(&$entity, $machine_name, $new_state, $manual = TRUE) {
+  if (entity_is_node($entity)) {
+    $machines = states_get_machines('node');
+    $node_unchanged = drupal_clone($entity);
+
+    if ($machines[$entity->type][$machine_name] && _states_is_valid_state($new_state, $machines[$entity->type][$machine_name])) { 
+      db_query("UPDATE {node_state} SET state = '%s' WHERE vid = %d AND machine = '%s'", $new_state, $entity->vid, $machine_name);
+      // If we affected 0 rows, this is the first time saving this machine's state
+      if (!db_affected_rows()) {
+        db_query("INSERT INTO {node_state} (nid, vid, machine, state) VALUES(%d, %d, '%s', '%s')",
+          $entity->nid, $entity->vid, $machine_name, $new_state);
+      }
+    }
+    else {
+      db_query("DELETE FROM {node_state} WHERE vid = %d AND machine = '%s'", $entity->vid, $machine_name);
+      $new_state = NULL;
+    }
+    states_entity_set_machine_state($entity, $machine_name, $new_state);
+    if (module_exists('workflow_ng') && $manual) {
+      //manually generate the update event
+      workflow_ng_invoke_event('node_update', array('node' => &$entity, 'node_unchanged' => $node_unchanged));
+    }
+    return $entity;
+  }
+  else if (entity_is_user($entity)) {
+    $machines = states_get_machines('user');
+    //we need to save the unchanged user object for invoking workflow-ng's event
+    $unchanged_user = drupal_clone($entity);
+
+    if ($machines[$machine_name] && _states_is_valid_state($new_state, $machines[$machine_name])) {
+      db_query("UPDATE {users_state} SET state = '%s' WHERE uid = %d AND machine = '%s'", $new_state, $entity->uid, $machine_name);
+      // If we affected 0 rows, this is the first time saving this machine's state
+      if (!db_affected_rows()) {
+        db_query("INSERT INTO {users_state} (uid, machine, state) VALUES(%d, '%s', '%s')",
+          $entity->uid, $machine_name, $new_state);
+      }
+    }
+    else {
+      db_query("DELETE FROM {users_state} WHERE uid = %d AND machine = '%s'", $entity->uid, $machine_name);
+      $new_state = NULL;
+    }
+    states_entity_set_machine_state($entity, $machine_name, $new_state);
+    if (module_exists('workflow_ng') && $manual) {
+      //manually generate the update event
+      workflow_ng_invoke_event('user_update', $entity, array(), $unchanged_user);
+    }
+    return $entity;
+  }
+}
+
+/*
+ * Determines if the given state is valid
+ */
+function _states_is_valid_state($state, $machine_info) {
+  return $machine_info['#states'] == '*' || in_array($state, $machine_info['#states']);
+}
+
+/*
+ * Determines if the user has a state machine associated,
+ * and returns the associated machines, if any.
+ */
+function states_user_has_machines($user) {
+  $machines = states_get_machines('user');
+  $result = array();
+  foreach($machines as $name => $info) {
+    if (!isset($info['#roles']) || array_intersect(array_keys($user->roles), $info['#roles'])) {
+      $result[$name] = $info;
+    }
+  }
+  return $result;
+}
+
+/*
+ * Determines the attribute name used for storing the machine state in the entity
+ */
+function _states_machine_get_attribute_name($machine_name) {
+  $machines = states_get_machines();
+  return isset($machines[$machine_name]['#attribute_name']) ? $machines[$machine_name]['#attribute_name'] : $machine_name;
+}
+
+/*
+ * Sets the state of the machine $machine_name to the state $new_state in the entity object
+ * The new state isn't checked for validity, it will be just set in the entity object!
+ */
+function states_entity_set_machine_state(&$entity, $machine_name, $new_state) {
+  $entity->states[_states_machine_get_attribute_name($machine_name)] = $new_state;
+}
+
+/*
+ * Returns the state of $machine_name for the given entity
+ */
+function states_entity_get_machine_state(&$entity, $machine_name) {
+  if (!isset($entity->states)) {
+    //load the machine states
+    if (entity_is_node($entity)) {
+      if ($extra = states_nodeapi($entity, 'load')) {
+        foreach ($extra as $key => $value) {
+          $entity->$key = $value;
+        }
+      }
+    }
+    else if (entity_is_user($entity)) {
+      states_user('load', $entity, $entity);
+    }
+  }
+  return $entity->states[_states_machine_get_attribute_name($machine_name)];
+}
+
+/*
+ * Cares for proper initiation of init_state machine values
+ * 
+ * Note: This function gets could two times, the first time
+ * with the old data, the second time with the new data
+ */
+function states_entity_initiate_new_init_states($data) {
+  static $old_data;
+  if (!isset($old_data)) {
+    $old_data = $data;
+    return;
+  }
+  //we have all data now - search for new init_states
+  $machines = array();
+  foreach ($data as $name => $info) {
+    if (isset($info['#init_state']) && !isset($old_data[$name]['#init_state'])) {
+      //a new init_state has been found
+      $machines[$name] = $info;
+    }
+  }
+  $new = $machines + variable_get('states_init_state_machines', array());
+  if (!empty($new)) {
+    variable_set('states_init_state_machines', $new);
+    states_entity_initiate_init_states(5000);
+  }
+}
+
+/*
+ * Initiates the init_states for all entities without state...
+ */
+function states_entity_initiate_init_states($limit = 50000) {
+  if(($machines = variable_get('states_init_state_machines', -1)) == -1) {
+    return;
+  }
+  foreach ($machines as $name => $info) {
+    $result = db_query_range(_states_entity_initiate_get_sql($info), $name, 0, $limit);
+    while ($entity = db_fetch_object($result)) {
+      states_machine_set_state($entity, $name, $info['#init_state'], FALSE);
+      $limit--;
+    }
+    unset($machines[$name]);
+    if (!empty($machines)) {
+      variable_set('states_init_state_machines', $machines);
+    }
+    else {
+      variable_del('states_init_state_machines');
+    }
+  }
+}
+
+/*
+ * Gets the sql for a machine info, that retrieves all entities that have to be initiated
+ */
+function _states_entity_initiate_get_sql($info) {
+  if ($info['#entity'] == 'user') {
+    $sql = "SELECT DISTINCT u.* FROM {users} u ".
+           "LEFT JOIN {users_state} us ON us.uid = u.uid AND us.machine = '%s' "; 
+    if (!empty($info['#roles']) && !in_array(DRUPAL_AUTHENTICATED_RID, $info['#roles'])) {
+      $roles = array_map('intval', array_filter($info['#roles']));
+      $sql .= "INNER JOIN {users_roles} ur ON ur.uid = u.uid AND ur.rid IN (". implode(", ", $roles) .") ";
+    }
+    $sql .= "WHERE us.uid IS NULL";
+  }
+  else if ($info['#entity'] == 'node') {
+
+    $sql = "SELECT n.* FROM {node} n ".
+           "LEFT JOIN {node_state} ns ON ns.vid = n.vid AND ns.machine = '%s' ". 
+           "WHERE ns.vid IS NULL";
+    if (!empty($info['#types'])) {
+      $types = array_map('db_escape_string', $info['#types']);
+      $sql .=  " AND n.type IN ('". implode("','", $types) ."')";
+    }
+  }
+  return $sql;
+}
+
+/*
+ * Implementation of hook_cron()
+ */
+function states_cron() {
+  //initate init states, if there are some uninitated entities
+  states_entity_initiate_init_states();
+}
+
+
+/*
+ * Helper functions for entites
+ */
+
+/*
+ * Determines if the given entity is a node
+ */
+function entity_is_node($entity) {
+  return is_string($entity->type) && is_numeric($entity->vid) && is_numeric($entity->nid);
+}
+
+/*
+ * Determines if the given entity is a user
+ */
+function entity_is_user($entity) {
+  return !is_string($entity->type) && is_numeric($entity->uid) && is_string($entity->name);
+}
+
+/*
+ * Token integration
+ */
+/**
+ * Implementation of hook_token_values()
+ */
+function states_token_values($entity_type, $object = NULL) {
+  $values = array();
+  foreach (states_get_machines() as $name => $info) {
+    if ($info['#entity'] == $entity_type) {
+      $values['state-'. $name] = states_entity_get_machine_state($object, $name);
+    }
+  }
+  return $values;
+}
+
+/**
+ * Implementation of hook_token_list()
+ */
+function states_token_list($entity_type = 'all') {
+  $tokens = array();
+  foreach (states_get_machines() as $name => $info) {
+    if ($info['#entity'] == $entity_type || $entity_type == 'all') {
+      $tokens[$info['#entity']]['state-'. $name] = t('States: @label', array('@label' => $info['#label']));
+    }
+  }
+  return $tokens;
+}

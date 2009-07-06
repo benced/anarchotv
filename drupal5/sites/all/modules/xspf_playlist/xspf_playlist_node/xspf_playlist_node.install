@@ -1,0 +1,94 @@
+<?php
+
+// $Id: xspf_playlist_node.install,v 1.1.2.6 2008/12/19 19:48:46 arthuregg Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function xspf_playlist_node_install() {
+  xspf_playlist_node_import_settings();
+}
+
+/**
+ * Convert settings data as created by xspf_playlist module before this module
+ * was factored out.
+ */
+function xspf_playlist_node_import_settings() {
+  $types = _node_types_build();
+
+  // Import any variables previously handled by xsdf_playlist module.
+  // Import the xspf_playlist_types variable.
+  if ($enabled_types = array_filter(variable_get('xspf_playlist_types', FALSE))) {
+    // Update settings for existing content types.
+    foreach ($enabled_types as $type) {
+      if ($types = array_filter(variable_get('xspf_' . $type . '_use', array()))) {
+        $values = array();
+        foreach ($types as $existing_value) {
+          // The module name has changed. Update it.
+          $values[] = str_replace('xspf_playlist', 'xspf_playlist_node', $existing_value);
+        }
+        variable_set('xspf_' . $type . '_use', drupal_map_assoc($values));
+      }
+      // Import any field-related variables.
+      if (isset($types[$type]['fields'])){
+        foreach ($types[$type]['fields'] as $field) {
+          // Only bother with text, images or files.
+          if (in_array($field['type'], array('text', 'image', 'file', 'file_video') )) {
+            if ($fields = array_filter(variable_get('xspf_playlist_'. $value .'_fields', array()))) {
+              $values = array();
+              foreach ($fields as $existing_value) {
+                // The module name has changed. Update it.
+                $values[] = str_replace('xspf_playlist', 'xspf_playlist_node', $existing_value);
+              }
+              variable_set('xspf_playlist_'. $value .'_fields', drupal_map_assoc($values));
+            }
+          }
+        }
+      }
+    }
+    variable_set('xspf_playlist_node_types', $enabled_types);
+  }
+
+  variable_del('xspf_playlist_types');
+
+  // Claim any views previously created with xspf_playlist module.
+  if (module_exists('views') && db_num_rows("SELECT * FROM {view_view} WHERE page_type = 'xspf_playlist'")) {
+    db_query("UPDATE {view_view} SET page_type = 'xspf_playlist_node' WHERE page_type = 'xspf_playlist'");
+    views_invalidate_cache();
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ * Remove variables handled by this module.
+ */
+function xspf_playlist_node_uninstall() {
+  $variables = array(
+    'xspf_playlist_node_types',
+  );
+  // Clean up variables set by content type.
+  $types = _node_types_build();
+  if ($enabled_types = array_filter(variable_get('xspf_playlist_node_types', FALSE))) {
+    foreach ($enabled_types as $type) {
+      $variables[] = 'xspf_' . $type . '_use';
+      $variables[] = 'xspf_playlist_'. $type .'_fields';
+      $variables[] = 'xspf_'. $type .'_thumb';
+      $variables[] = 'xspf_'. $type .'_thumb_first';
+    }
+  }
+  foreach ($variables as $name) {
+    variable_del($name);
+  }
+}
+
+
+/**
+ * rebuild the menu to get the new XSPF path
+ * @return array
+ */
+function xspf_playlist_node_update_5120() {
+  menu_rebuild();
+  return array();
+}
+

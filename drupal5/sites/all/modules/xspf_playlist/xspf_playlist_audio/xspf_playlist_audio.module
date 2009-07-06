@@ -1,0 +1,32 @@
+<?php
+
+// $Id: xspf_playlist_audio.module,v 1.1.2.1 2008/11/13 05:15:06 arthuregg Exp $
+
+/**
+ * @FILE This module provides integration with the Audio module with XSPF playlists
+ * 
+ */
+
+/**
+* implemenation of hook_xspf_playlist_use
+* @param string $op
+* @param object $node
+* @param array $config
+*/
+function xspf_playlist_audio_use($op, $node, $config) {
+  switch($op) {
+    case 'define' :
+        $define['audio--1'] = t('Use audio node file');
+      return $define;
+    break;
+
+    case 'return':
+      if ($config == 1) {
+        if ($item = xspf_playlist_create_file_item($node, xspf_playlist_url($node->audio_file->filepath))) {
+          $items[] =  $item;
+          return $items;
+        }
+      }
+   break;
+  }
+}

@@ -1,0 +1,254 @@
+<?php
+// $Id: asset_embed.module,v 1.1.2.1 2008/07/24 10:44:16 wmostrey Exp $
+
+/**
+ * @file 
+ * Asset Embed Module
+ *
+ * This module allows you to use embed code form various sites as assets. Each
+ * provider is specified by an .inc file in the providers folder.
+ */
+
+/**
+ * Invoke a provider method.
+ */
+function asset_embed_invoke() {
+  $args = func_get_args();
+  $provider = array_shift($args);
+  $hook = array_shift($args);
+  
+  $function ='asset_embed_'. $provider .'_'. $hook;
+  if (function_exists($function)) {
+    return call_user_func_array($function, $args);
+  }
+  
+  return false;  
+}
+
+/**
+ * return a list of available providers
+ * 
+ * @param $all
+ *   Should all providers be returned or just the enabled ones.
+ * @return
+ * 	 The array of availabe providers
+ */
+function asset_embed_list_providers($all = FALSE) {
+  static $providers = NULL;
+  if ($providers) {
+    return $providers;
+  }
+  $path = drupal_get_path('module', 'asset_embed') .'/providers';
+  $files = drupal_system_listing('.*\.inc$', $path, 'name', 0);
+  foreach ($files as $file) {
+    if ($all || variable_get('asset_embed_'. $file->name .'_enabled', 1)) {
+      require_once("./$file->filename");
+      $info = asset_embed_invoke($file->name, 'info');
+      $providers[$file->name] = $info['name'] ? $info['name'] : $file->name;
+    }
+  }
+  return $providers;
+}
+
+function asset_embed_extract_id($provider, $text) {
+  return asset_embed_invoke($provider, 'extract_id', $text);
+}
+
+function asset_embed_asset_settings() {
+  $providers = asset_embed_list_providers(TRUE);
+  if (is_array($providers)) {
+    foreach ($providers as $provider => $name) {
+      $form[$provider] = array(
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => !variable_get('asset_embed_'. $provider .'_enabled', 1),
+        '#title' => $name,
+        '#tree' => FALSE,
+      );
+      $form[$provider]['asset_embed_'. $provider .'_enabled'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Enabled'),
+        '#default_value' => variable_get('asset_embed_'. $provider .'_enabled', 1),
+        '#return_value' => 1,
+      );
+      $form[$provider] = array_merge($form[$provider], (array)asset_embed_invoke($provider, 'settings'));
+    }
+  }
+  else{
+    $form[] = array('#value' => t('No Providers Available'));
+  }
+
+  return system_settings_form($form);
+}
+
+function asset_embed_asset_type($op = 'info', $delta=0, $form_values=array()) {
+  switch ($op) {
+    case 'info':
+      return array(
+        'embed' => array(
+          'value' => t('Embed'),
+          'title' => t('Embed content from another site.'),
+          'src' => drupal_get_path('module', 'asset') .'/lullacons/movie-option-add.png',
+        ),
+      );
+    case 'form':
+      switch ($delta) {
+        case 'embed': 
+          $form['provider'] = array(
+            '#type' => 'select',
+            '#title' => t('Provider'),
+            '#options' => asset_embed_list_providers(),
+            '#weight' => -2,
+          );
+          $form['embed'] = array(
+            '#type' => 'textarea',
+            '#title' => t('Embed Code'),
+            '#rows' => 3,
+            '#weight' => -1,
+          );
+          break;
+      }
+      return $form;
+    case 'validate':
+      // return a valid asset aid
+      switch ($delta) {
+        case 'embed':
+          if ($data = asset_embed_extract_id($form_values['provider'], $form_values['embed'])) {
+            $path = $form_values['parent'] .'/'. $data['id'] .'.'. $form_values['provider'];
+            $asset->filepath = $path;
+            $asset->type = 'embed';
+            $asset->embed_data = $data;
+            $asset = asset_save($asset, $form_values);
+            return $asset->aid;
+          }
+          else {
+            form_set_error('embed', 'Error extracting video ID.</em>');
+          }
+          break;
+      }
+      break;
+    case 'submit':
+      // must return a valid asset aid
+      switch ($delta) {
+      }
+      break;
+  }
+      
+}
+
+function asset_embed_asset_formatter($op='info', $asset=null, $attr=array()) {
+  $providers = asset_embed_list_providers();
+  switch ($op) {          
+    case 'info':
+      $formats['fullsize'] = array(
+        'name' => 'Full-Size Embed',
+        'types' => array('embed' => array('*')),
+        'description' => t('Display the full-size version of the embedded content.'),
+      );
+      $formats['thumbnail'] = array(
+        'name' => 'Thumbnail Embed',
+        'types' => array('embed' => array('*')),
+        'description' => t('Display a thumbnail preview image of the embedded content.'),
+      );
+      return $formats;
+    case 'init':
+      break;      
+    case 'options':
+      switch ($attr['format']) {
+        case 'thumbnail':
+          $form['height'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Height'),
+            '#size' => '10',
+            '#default_value' => '120',
+          );
+          $form['width'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Width'),
+            '#size' => '10',
+            '#default_value' => '160',
+          );
+          break;
+        case 'fullsize':
+          $form['height'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Height'),
+            '#size' => '10',
+            '#default_value' => '335',            
+          );
+          $form['width'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Width'),
+            '#size' => '10',
+            '#default_value' => '425',            
+          );
+        break;
+      }
+      $form = array_merge($form, (array)asset_embed_invoke($asset->embed['provider'], 'formatter_options', $asset, $attr['format']));
+      return $form;
+    case 'preview':
+      if (function_exists('theme_asset_embed_'. $asset->embed['provider'] .'_thumbnail')) {
+        return theme('asset_embed_'. $asset->embed['provider'] .'_thumbnail', $asset);
+      }
+      return theme('asset_embed_thumbnail', $asset);
+    case 'img':
+      return asset_embed_invoke($asset->embed['provider'], 'thumbnail_src', $asset, $attr);
+      break;
+    case 'details':
+      break;
+    case 'render':
+      switch ($attr['format']) {
+        case 'thumbnail':
+          if (function_exists('theme_asset_embed_'. $asset->embed['provider'] .'_thumbnail')) {
+            return theme('asset_embed_'. $asset->embed['provider'] .'_thumbnail', $asset);
+          }
+          return theme('asset_embed_thumbnail', $asset);
+          break;
+        case 'fullsize':
+        default:
+          
+          if (function_exists('theme_asset_embed_'. $asset->embed['provider'] .'_fullsize')) {
+            return theme('asset_embed_'. $asset->embed['provider'] .'_fullsize', $asset, $attr);
+          }
+          return theme('asset_embed_fullsize', $asset, $attr);
+          break;
+      }      
+      break;
+  }
+}
+
+function asset_embed_assetapi($op='list', $asset=null) {
+  switch ($op) {
+    case 'load':
+      if ($asset->type == 'embed') {        
+        $fields['embed'] = unserialize(db_result(db_query('SELECT data FROM {asset_embed} WHERE aid=%d', $asset->aid)));
+        $fields['embed']['provider'] = $asset->extension;
+      }
+      return $fields;
+    case 'insert':
+      if ($asset->type == 'embed') {
+        db_query('INSERT INTO {asset_embed} (aid, data) VALUES (%d, "%s")', $asset->aid, serialize($asset->embed_data));
+      }
+      break;
+  }
+}
+
+function theme_asset_embed_thumbnail($asset) {
+  $id = $asset->embed['id'];
+  $url = "http://img.youtube.com/vi/$id/2.jpg";
+  $alt = $title = $asset->title;
+  $img = '<img src="'. check_url($url) .'" alt="'. check_plain($alt) .'" title="'. check_plain($title) .'" />';      
+  return $img;
+}
+
+function theme_asset_embed_fullsize($asset, $attr = array()) {
+  $id = $asset->embed['id'];
+  
+  return '<object width="'. $attr['width'] .'" height="'. $attr['height'] .'">'
+       .'<param name="movie" value="http://www.youtube.com/v/'. $id .'"></param>'
+       .'<param name="wmode" value="transparent"></param>'
+       .'<embed src="http://www.youtube.com/v/'. $id .'" type="application/x-shockwave-flash" '
+       .'wmode="transparent" width="'. $attr['width'] .'" height="'. $attr['height'] .'">'
+       .'</embed></object>';
+}
+

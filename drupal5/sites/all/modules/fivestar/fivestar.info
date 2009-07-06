@@ -1,0 +1,10 @@
+; $Id: fivestar.info,v 1.1.4.1 2007/03/07 03:19:39 eaton Exp $
+name = Fivestar
+description = A simple five-star voting widget for nodes.
+dependencies = votingapi
+package = Voting
+; Information added by drupal.org packaging script on 2008-08-23
+version = "5.x-1.13"
+project = "fivestar"
+datestamp = "1219471215"
+

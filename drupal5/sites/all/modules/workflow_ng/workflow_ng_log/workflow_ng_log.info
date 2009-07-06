@@ -1,0 +1,10 @@
+; $Id: workflow_ng_log.info,v 1.1.2.1 2008/01/18 19:05:05 fago Exp $
+name = Per-Entity Logs
+description = Provides per-user and per-node logs which can be written to by actions and presented using views.
+package = Workflow-ng
+
+; Information added by drupal.org packaging script on 2008-05-14
+version = "5.x-2.1"
+project = "workflow_ng"
+datestamp = "1210778117"
+

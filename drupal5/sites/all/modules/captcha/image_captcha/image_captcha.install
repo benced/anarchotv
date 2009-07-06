@@ -1,0 +1,15 @@
+<?php
+// $Id: image_captcha.install,v 1.1.2.2 2008/06/09 11:06:50 soxofaan Exp $
+
+/**
+ * @file
+ * Installation file for the image CAPTCHA module.
+ */
+
+/**
+ * On uninstall: remove module variables and clear variable cache
+ */
+function image_captcha_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'image_captcha_%'");
+  cache_clear_all('variables', 'cache');
+}

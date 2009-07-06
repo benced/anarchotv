@@ -1,0 +1,22 @@
+/* $Id: changelog.txt,v 1.9 2008/05/11 03:56:54 alexua Exp $ */
+2008-05-10
+#249255 - ekes added MRSS support to multiple files
+
+2008-04-30
+#239374 Can't turn off custom thumbnail feature on node/add for video and image
+
+2008-02-09
+#216553- patch by dalin to increase max length to $form['emthumb']['emthumb_description'].
+#213447- patch by jhedstrom to change paths in emthumb_thumbnail_url() from relative to absolute.
+
+2008-01-08
+remove references to imagefield
+
+2008-01-07
+#207165/vnd remove debug code
+#207085/vnd Fatal error: Cannot access empty property
+
+2008-01-04
+remove debugging statements on multiple
+fix array_push bug
+created emthumb module

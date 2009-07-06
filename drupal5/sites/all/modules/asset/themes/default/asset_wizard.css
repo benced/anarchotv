@@ -1,0 +1,233 @@
+/**
+ * Default Skin
+ */
+
+/**
+ * TinyMCE pulls in editor_popup.css through js so we include our own version of it
+ * to kill all the unwanted styling.
+ **/
+@import url(editor_popup.css);
+
+#asset-popup{
+  overflow: auto;
+  background: #F3F4EE url(wizard.bg.png) repeat-y top right;
+  background: #E0E3EC url(wizard.bg.png) repeat-y top left;
+}
+#asset-popup-main{
+  min-height: 270px;
+  min-width: 500px;
+  height: auto;
+  background: url(asset.bg.png) no-repeat fixed right 150px;
+  
+  padding-top: 80px;
+  padding-bottom: 50px;
+}
+#asset-popup h1{
+  display: none;
+}
+#asset-popup-footer{
+  border: none;
+  border-top: groove 2px #fff;
+  font-size: 14px;
+  padding: 10px 1em;
+  position: fixed;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background: #E0E3EC url(wizard.bg.png) repeat-y top left;
+  overflow: hidden;
+}
+#asset-popup-main.asset-selection-form{
+  padding: 80px 0 0 0;
+}
+select#edit-aid{
+  border-width: 1px;
+}
+.help{
+  width: 350px;
+}
+.crumb-left{
+  height: 25px;
+  line-height: 25px;
+  padding-left: 12px;
+  clear: both;
+}
+.crumb-right{
+  height: 25px;
+  line-height: 25px;
+  padding-right: 12px;
+}
+.toolbar{
+  height: 70px;
+  line-height: 32px;
+  border: groove 2px #fff;
+  border-width: 2px 0;
+  background-color: transparent;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  background: #E0E3EC url(wizard.bg.png) repeat-y top left;
+  overflow: hidden;
+  
+}
+.toolbar .container-inline{
+}
+.toolbar-separator{
+  padding: 0 1em;
+  font-weight: bold;
+  display: none;
+}
+.toolbar .item-list ul{
+  margin: 0;
+  padding: 5px 0;
+}
+.toolbar .item-list ul li{
+  float: left;
+  list-style: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+.toolbar li.last{
+  border-right: groove 3px #fff;
+  padding-right: 5px;
+}
+.toolbar li a{
+  display: block;
+  width: 58px;
+  height: 50px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  text-decoration: none;
+  color: #626262;
+  padding: 5px 1px;
+  margin: 0 5px;
+}
+.toolbar a:link,
+.toolbar a:visited,
+.toolbar a:active{
+  color: #626262;
+}
+.toolbar a:hover{
+  background: #dcdcdc;
+  background: transparent url(button.hover.png) no-repeat 0 0;
+  background: #FFFEEC;
+  padding: 4px 0px;
+  border: outset 1px #FFFEEC;
+  -moz-border-radius: 4px;
+  text-decoration: none;
+}
+.toolbar a img{
+  height: 32px;
+}
+
+#asset-popup ul.folder-list{
+  margin-left: 5px;
+  border: inset 1px #f0f0f0;
+  height: 196px;
+}
+#asset-popup ul.folder-list li {
+  padding-left: -40px !important;
+  margin-left: -40px !important;
+}
+#asset-popup ul.folder-list li a{
+  display: block;
+  padding: 0 5px 0 20px;
+  background: transparent url(../../lullacons/folder-closed-white.png) no-repeat 2px 0;
+  line-height: 16px;
+}
+#asset-popup ul.folder-list li.parent a{
+  background: transparent url(../../lullacons/arrow-single-up-green.png) no-repeat 5px 3px;
+}
+#asset-popup ul.folder-list li a:hover{
+  background-color: #dcdcdc;
+  color: #000;
+}
+#asset-popup .asset-preview{
+  border: inset 1px #f0f0f0;
+  height: 196px;
+}
+option:active{
+  background: #ebebeb;
+}
+.button-replacement,
+.button-replacement:link{
+  float: right;
+  padding-left: 12px;
+  height: 27px;
+  line-height: 27px;
+  background: url(images/button.normal.gif) no-repeat top left;
+  margin: 0 10px;
+  text-decoration: none;
+  color: #777;
+}
+.button-replacement span{
+  padding-right: 18px;
+  padding-left: 6px;
+  margin-right: -12px;
+  float: left;
+  height: inherit;
+  background-image: inherit;
+  background-repeat: no-repeat;
+  background-position: top right;
+}
+.button-replacement:hover{
+  background-image: url(images/button.active.gif);
+	text-decoration: none;
+	color: #555;
+}
+#asset-popup-footer .form-submit{
+  margin: 0;
+}
+#asset-popup-footer #edit-cancel{
+  margin-left: 10px;
+}
+#asset-popup-footer #edit-next{
+  margin-right: 10px;
+}
+#asset-popup .location{
+  position: relative;
+  margin: 5px;
+  padding: 2px 5px;
+  border: inset 2px #f0f0f0;
+  background: #fff url(../../lullacons/arrow-single-down-green.png) no-repeat center right;
+  z-index: 100;
+}
+#asset-popup .location ul{
+  background: #fff;
+  max-height: 100px;
+  overflow: auto;  
+  display: none;
+  position: absolute;
+  top: 20px;
+  left: -2px;
+  right: -2px;
+  border: solid 2px #848484;
+  border-top-width: 1px;
+  z-index: 100;
+  margin: 0;
+  padding: 0;
+}
+#asset-popup .location li{
+  list-style: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+#asset-popup .location li a{
+  display: block;
+}
+#asset-popup .location li a:hover{
+  background: #dcdcdc;
+  text-decoration: none;  
+}
+#locationBarOverlay{
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  display: none;
+}

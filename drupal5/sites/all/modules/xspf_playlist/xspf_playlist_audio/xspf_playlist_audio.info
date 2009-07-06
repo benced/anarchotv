@@ -1,0 +1,12 @@
+; $Id: xspf_playlist_audio.info,v 1.1.2.2 2008/12/02 05:02:11 arthuregg Exp $
+name = "XSPF Playlist Audio"
+description = "Integrates Audio Module files with XSPF Playlists."
+package = "Media"
+dependencies = xspf_playlist audio
+
+
+; Information added by drupal.org packaging script on 2009-01-02
+version = "5.x-1.20-beta1"
+project = "xspf_playlist"
+datestamp = "1230936040"
+

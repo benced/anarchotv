@@ -1,0 +1,10 @@
+; $Id: image_im_advanced.info,v 1.1 2007/08/26 21:30:02 drewish Exp $
+name = ImageMagick Advanced Options
+description = Adds advanced options to the ImageMagick image toolkit.
+package = Image
+
+; Information added by drupal.org packaging script on 2008-08-17
+version = "5.x-2.0-alpha3"
+project = "image"
+datestamp = "1218964512"
+

@@ -1,0 +1,73 @@
+<?php
+
+// $Id$
+
+/**
+ * @FILE This module provides integration with the CKK module with XSPF playlists
+ * 
+ */
+
+
+/**
+* implemenation of hook_xspf_playlist_use
+* @param string $op
+* @param object $node
+* @param array $config
+*/
+function xspf_playlist_cck_xspf_playlist_use($op, $node, $config) {
+  switch($op) {
+    case 'define' :
+      return xspf_playlist_cck_fields($config);
+    break;
+
+    case 'return':
+    	// fetch items from node
+      if ($item = xspf_playlist_cck_get_files_from_cck($node, $config)) {
+        return array($item);        
+      }
+   break;
+  }
+}
+
+
+/**
+ * This function gets a list of all CCK fields that can be used for this item
+ * @param string $config 
+ * @return array
+ */
+function xspf_playlist_cck_fields($config) {
+	// get our content type's field
+	$fields = content_fields(null, $config);
+	if ($fields) {
+	  foreach ($fields as $name => $field) {
+			// only bother with text, images or files
+			// @TODO integrate emfield here
+			if (in_array($field['type'], array('text', 'image', 'file', 'file_video') )) {
+				$return['xspf_playlist_cck--'. $name] = t('CCK !type: !name', array('!type' => $field['type'], '!name' => $field['widget']['label']));
+			}
+	  }
+	  return $return;
+	}
+}
+
+
+/**
+ * retrives files from a node cck fields
+ * format for playlist
+ * @param object $node 
+ *   drupal node object
+ * @param array $config
+ *   field name being passed back in
+ * @return array of items
+ */
+function xspf_playlist_cck_get_files_from_cck($node, $config) {
+  if ($node->{$config}) {
+	  // check file fields and then normal fields
+	  $path = $node->{$config}[0]['filepath'] ? url($node->{$config}[0]['filepath'], NULL, NULL, TRUE) : $node->{$config}[0]['value'];
+	  if ($path) {
+	  	if ($item = xspf_playlist_create_file_item($node, xspf_playlist_url($path))) {
+	      return array($item);
+	  	}
+	  }
+  }
+}

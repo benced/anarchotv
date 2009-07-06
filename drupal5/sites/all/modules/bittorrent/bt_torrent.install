@@ -1,0 +1,61 @@
+<?php
+// $Id: bt_torrent.install,v 1.4.2.9 2007/09/22 05:10:21 bradfordcp Exp $
+
+/**
+ * Implementation of hook_install
+ */
+function bt_torrent_install() {
+  drupal_set_message(t('Beginning installation of BitTorrent Torrent module.'));
+  
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {bt_torrents} (
+        nid int unsigned UNIQUE NOT NULL,
+        info_hash tinyblob NOT NULL,
+        use_announce varchar(255) DEFAULT '' NOT NULL,
+        metadata mediumblob DEFAULT '' NOT NULL,
+        web_seed_path varchar(255) DEFAULT '' NOT NULL,
+        snatches bigint unsigned DEFAULT 0 NOT NULL,
+        seeders bigint unsigned DEFAULT 0 NOT NULL,
+        leechers bigint unsigned DEFAULT 0 NOT NULL,
+        PRIMARY KEY(nid))");
+      db_query("CREATE TABLE {bt_torrents_files} (
+        nid int unsigned NOT NULL,
+        length int unsigned NOT NULL,
+        path text DEFAULT '' NOT NULL,
+        name varchar(255) DEFAULT '' NOT NULL)");
+        
+      $success = TRUE;
+      break;
+      
+    default:
+      drupal_set_message(t('Unsupported database.'));
+      $success = FALSE;
+  }
+  
+  if ($success) {
+    $success = is_dir('files/'. md5(drupal_get_private_key()) .'-web-seeding') ? TRUE : mkdir('files/'. md5(drupal_get_private_key()) .'-web-seeding');
+    variable_set('bt_web_seed_dir', 'files/'. md5(drupal_get_private_key()) .'-web-seeding/');
+  }
+  
+  if ($success) {
+    drupal_set_message(t('The module installed tables successfully.'));
+  }
+  else {
+    drupal_set_message(t('The installation of the BitTorrent Torrent module was unsuccessful.'), 'error');
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function bt_torrent_uninstall() {
+  db_query('DROP TABLE {bt_torrents}, {bt_torrents_files}');
+  
+  $success = rmdir('files/'. md5(drupal_get_private_key()) .'-web-seeding');
+  
+  if (!$success) {
+    drupal_set_message(t('Could not remove web-seeding directory, please empty the directory before attempting to remove it.'), 'error');
+  }
+}

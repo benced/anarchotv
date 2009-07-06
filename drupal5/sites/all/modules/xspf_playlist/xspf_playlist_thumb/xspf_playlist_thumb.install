@@ -1,0 +1,39 @@
+<?php
+
+// $Id: xspf_playlist_thumb.install,v 1.1.2.4 2008/07/04 21:23:47 nedjo Exp $
+
+// xspf_playlist.install
+
+function xspf_playlist_thumb_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      db_query("CREATE TABLE {xspf_playlist_thumb} (
+        type varchar(32) NOT NULL default '',
+        id int unsigned NOT NULL default 0,
+        vid int unsigned NOT NULL default 0,
+        item_path varchar(255) NOT NULL default '',
+        thumbnail_path varchar(255) NOT NULL default '',
+        PRIMARY KEY (type, id, vid)
+      ) DEFAULT CHARACTER SET=utf8");
+      break;
+    
+    case 'pgsql':
+      db_query("CREATE TABLE {xspf_playlist_thumb} (
+        type varchar(32) NOT NULL default '',
+        id int_unsigned NOT NULL default '0',
+        vid int_unsigned NOT NULL default '0',
+        item_path varchar(255) NOT NULL default '',
+        thumbnail_path varchar(255) NOT NULL default '',
+        PRIMARY KEY (type, id, vid)
+      )");
+      break;
+  }  
+}
+
+/**
+ * implmentation of uninstall, drops tables
+ */
+function xspf_playlist_thumb_uninstall() {
+  db_query('DROP TABLE {xspf_playlist_thumb}');
+}

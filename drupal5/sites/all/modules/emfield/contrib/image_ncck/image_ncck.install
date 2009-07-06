@@ -1,0 +1,21 @@
+<?php
+// $Id: image_ncck.install,v 1.2 2008/02/17 19:09:46 aaron Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function image_ncck_install() {
+}
+
+function image_cck_update_1() {
+  $ret = _image_cck_update_reset_cache_views();
+  return $ret;
+}
+
+// I'd like this to be conditional, so it only runs if they don't have views installed.
+// however, module_exists doesn't actually work in the update scripts.
+function _image_ncck_update_reset_cache_views() {
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM {cache_views}");
+  return $ret;
+}

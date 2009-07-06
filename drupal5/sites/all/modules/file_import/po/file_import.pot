@@ -1,0 +1,158 @@
+# ENGLISH translation of file_import
+# Copyright (c) 2008 neochief <neochief@drupaldance.com>
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-02-15 00:06+0200\n"
+"PO-Revision-Date: 2008-02-15 00:07+0200\n"
+"Last-Translator: neochief <neochief@drupaldance.com>\n"
+"Language-Team: ENGLISH <neochief@drupaldance.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: /admin/build/modules/list/confirm
+msgid "file_import"
+msgstr ""
+
+#: /admin/settings/locale/language/overview
+msgid "File import"
+msgstr ""
+
+
+#: /admin/content/file_import
+msgid ""
+"You need to configure the import directory on the files import "
+"module's <a href='!admin-settings-file_import'>settings page</a>."
+msgstr ""
+
+#: /admin/content/file_import
+msgid ""
+"Import multiple files and save them as node attachments. The files "
+"will be moved from their default location."
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Searching for files in %dirpath."
+msgstr ""
+
+#: /admin/settings/file_import
+msgid "Import path"
+msgstr ""
+
+#: /admin/settings/file_import
+msgid ""
+"The directory to import files from. Drupal will need to have write "
+"access to this directory so we can move the file."
+msgstr ""
+
+#: /admin/settings/file_import
+msgid ""
+"<strong>Note:</strong> a path begining with a <kbd>/</kbd> indicates "
+"the path is relative to the server's root, not the website's root. One "
+"starting without a <kbd>/</kbd> specifies a path relative to Drupal's "
+"root. For example: <kbd>/tmp/image</kbd> would be the temp directory "
+"off the root while <kbd>tmp/image</kbd> would be inside Drupal's "
+"directory."
+msgstr ""
+
+#: /admin/settings/file_import
+msgid "Import to nodes which has permission to contain files only"
+msgstr ""
+
+#: /admin/settings/file_import
+msgid "Configure the files import module's settings."
+msgstr ""
+
+#: /admin/content/file_import
+msgid "No files in import directory"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Target node"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "You can set target node to a bunch of selected files at once."
+msgstr ""
+
+#: /admin/content/file_import
+msgid " Select node from list below and press button to set the values."
+msgstr ""
+
+#: /admin/content/file_import
+msgid "ID - Title"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Set for selected rows"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Edit titles"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Clear selected titles"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Capitalize first letter"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Capitalize all words"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "RegEx replacement in titles"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Replace in selected"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Target node ID"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "@count[2] files"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "Successfully imported %count"
+msgstr ""
+
+#: /admin/settings/file_import
+msgid "Output path"
+msgstr ""
+
+#: /admin/settings/file_import
+msgid ""
+"The directory to output files to. Drupal will need to have write "
+"access to this directory so we can move the file."
+msgstr ""
+
+#: /admin/settings/file_import
+msgid "Display tab on node pages"
+msgstr ""
+
+#: /node/50/file_import
+msgid "Replace from"
+msgstr ""
+
+#: /node/50/file_import
+msgid "Replace to"
+msgstr ""
+
+#: /node/50/file_import
+msgid "Clear titles"
+msgstr ""
+
+#: /admin/content/file_import
+msgid "No files files were imported."
+msgstr ""
+

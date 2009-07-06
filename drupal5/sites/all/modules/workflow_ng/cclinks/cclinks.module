@@ -1,0 +1,409 @@
+<?php
+// $Id: cclinks.module,v 1.1.2.12.2.4 2008/05/14 14:52:55 fago Exp $
+
+/**
+ * @file Configurable Content Events
+ * Provides events for configurable content types
+ */
+
+//only include the admin ui, if workflow-ng admin ui is enabled
+if (module_exists('workflow_ng_ui')) {
+  cclinks_include_admin_inc();
+}
+if (module_exists('views')) {
+  include_once(drupal_get_path('module', 'cclinks') .'/cclinks_views.inc');
+}
+
+//include cclinks action
+include_once(drupal_get_path('module', 'cclinks') .'/cclinks_action.inc');
+
+/*
+ * Includes the admin include, if it hasn't been included yet
+ */
+function cclinks_include_admin_inc() {
+  static $included = FALSE;
+
+  if (!$included) {
+    include_once(drupal_get_path('module', 'cclinks') .'/cclinks_admin.inc');
+    $included = TRUE;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function cclinks_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    foreach (cclinks_get_events() as $event_name => $settings) {
+      $items[] = array(
+        'path' => 'cclinks/'. $event_name,
+        'callback' => 'cclinks_link_click',
+        'callback arguments' => array($event_name),
+        'access' => user_access(_cclinks_event_permission($settings)),
+        'type' => MENU_CALLBACK,
+      );
+    }
+  }
+  if (module_exists('workflow_ng_ui')) {
+    cclinks_include_admin_inc();
+    $items = cclinks_admin_menu($items, $may_cache);
+  }
+  return $items;
+}
+
+
+/*
+ * Implementation of hook_perm()
+ */
+function cclinks_perm() {
+  $array = array();
+  foreach (cclinks_get_events() as $event_name => $settings) {
+    $array[] = _cclinks_event_permission($settings);
+  }
+  return $array;
+}
+
+/*
+ * Gets a permission name for an event
+ */
+function _cclinks_event_permission($settings) {
+  return 'use '. check_plain($settings['label']);
+}
+
+/*
+ * Saves an event
+ * @param $event_name The name of the event to save, must be unique!
+ * @param $settings An array of settings as listed by cclinks_setting_properties()
+ */
+function cclinks_save_event($event_name, $settings) {
+  $cclink_settings = variable_get('cclink_settings', array());
+  $cclink_settings[$event_name] = $settings;
+  variable_set('cclink_settings', $cclink_settings);
+  states_clear_machine_cache();
+  cache_clear_all('*', 'cache_menu', TRUE);
+}
+
+/**
+ * Gets an array of configured events, where the keys are the event names.
+ */
+function cclinks_get_events() {
+  return array_filter(variable_get('cclink_settings', array()));
+}
+
+function cclinks_get_next_id() {
+  return count(variable_get('cclink_settings', array()));
+}
+
+/**
+ * Gets an array of configured events, where the keys are the event names
+ * and the values their label
+ */
+function cclinks_get_labels() {
+  $labels = array();
+  foreach (cclinks_get_events() as $event_name => $settings) {
+    $labels[$event_name] = $settings['label'];
+  }
+  return $labels;
+}
+
+/*
+ * Deletes an event and all possible configured configurations
+ */
+function cclinks_delete_event($event_name) {
+  cclinks_save_event($event_name, NULL);
+}
+
+/*
+ * Return an array of available properties for the cclink settings
+ * Look at the documentation for a description of them
+ */
+function cclinks_setting_properties() {
+  return array('active', 'label', 'types', 'link_label', 'toggle_label', 'weight', 'schedule', 'schedule_form');
+}
+
+
+/*
+ * Implementation of hook_states
+ * Use a state machine to track toggled links
+ */
+function cclinks_states() {
+  $machines = array();
+  foreach (cclinks_get_events() as $event_name => $settings) {
+    if ($settings['toggle_label']) {
+      $machines['cce_'. $event_name] = array(
+        '#label' => t('Content Link "!label" Toggle', array('!label' => $settings['label'])), 
+        '#entity' => 'node',
+        '#types' => $settings['types'],
+        '#states' => array('clicked'),
+      );
+    }
+  }
+  return $machines;
+}
+
+/*
+ * Implementation of hook_link
+ */
+function cclinks_link($type, $node = NULL, $teaser = FALSE) {
+  $links = array();
+
+  if ($type == 'node') {
+    $cclinks = cclinks_get_events();
+    
+    foreach ($cclinks as $event_name => $settings) {
+      if (in_array($node->type, $settings['types']) && user_access(_cclinks_event_permission($settings))) {
+        if ($settings['toggle_label']) {
+          $state = states_entity_get_machine_state($node, 'cce_'. $event_name);
+          $title = (isset($state) && $state == 'clicked') ? $settings['toggle_label'] : $settings['link_label'];
+        }
+        else {
+          $title = $settings['link_label'];
+        }
+        $links[$event_name] = array(
+          'title' => $title,
+          'href' => "cclinks/$event_name/$node->nid/$node->vid",
+          'query' => drupal_get_destination(),
+          'weight' => $settings['weight'],
+        );
+      }
+    }
+    uasort($links, '_cclinks_sort');
+  }
+  return $links;
+}
+
+/*
+ * Implementation of hook_nodeapi
+ */
+function cclinks_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
+  //clean up schedules on deletion
+  if ($op == 'delete' || $op == 'delete revision') {
+    $cclinks = cclinks_get_events();
+    foreach ($cclinks as $event_name => $settings) {
+      if (in_array($node->type, $settings['types']) && $settings['schedule']) {
+        if ($op == 'delete') {
+          db_query("DELETE FROM {cclink_schedules} WHERE nid = %d", $node->nid);
+          return;
+        }
+        cclinks_delete_date($node, $event_name);
+      }
+    }
+  }
+}
+
+
+/*
+ * Callback for uasort
+ */
+function _cclinks_sort($a, $b) {
+  return $a['weight'] < $b['weight'] ? -1 : ($a['weight'] > $b['weight'] ? 1 : ($a['label'] < $b['label'] ? -1 : 1));
+}
+
+/*
+ * Implementation of hook_event_info
+ */
+function cclinks_event_info() {
+  $events = array();
+  foreach (cclinks_get_events() as $event_name => $settings) {
+    $events[$event_name] = array(
+      '#label' => check_plain($settings['label']),
+      '#arguments' => workflow_ng_events_node_arguments(t('content'), t('author')),
+      '#module' => t('Content Links'),
+    );
+  }
+  return $events;
+}
+
+/*
+ * Reacts on clicked links
+ */
+function cclinks_link_click($event_name, $nid, $vid) {
+  $cclinks = cclinks_get_events();
+  $settings = $cclinks[$event_name];
+  if ($node = node_load(intval($nid), intval($vid))) {
+    if (!$settings['schedule']) {
+      cclink_schedule_event($node, $event_name, FALSE);
+      cclink_toggle_label($node, $event_name);
+      drupal_goto();
+    }
+    else {
+      //show form
+      return drupal_get_form('cclinks_link_schedule_form', $node, $event_name, $settings);
+    }
+  }
+  drupal_not_found();
+}
+
+/*
+ * Displays a form, which lets the user enter a date for scheduling
+ */
+function cclinks_link_schedule_form($node, $event_name, $settings) {
+  global $user;
+
+  drupal_set_title(check_plain($settings['schedule_form']['title']));
+  $date = cclinks_get_date($node, $event_name);
+  $form['date'] = array(
+   '#type' => 'textfield', 
+   '#title' => t('Date'), 
+   '#maxlength' => 25,
+   '#default_value' => $date ? date('Y-m-d H:i:s', $date + cclinks_get_timezone()) : t('now'),
+   '#description' => t('Format: %time. For now just enter "%now".', array('%time' => date('Y-m-d H:i:s'), '%now' => t('now'))),
+   '#attributes' => (module_exists('jscalendar')) ? array('class' => 'jscalendar') : array()
+  );
+  $form['node'] = array('#type' => 'value', '#value' => $node);
+  $form['event_name'] = array('#type' => 'value', '#value' => $event_name);
+  $form['settings'] = array('#type' => 'value', '#value' => $settings);
+  $form['submit'] = array('#type' => 'submit', '#weight' => 10, '#value' => t($settings['schedule_form']['submit']));
+  if ($date) {
+    $form['abort_button'] = array(
+      '#type' => 'submit',
+      '#weight' => 11,
+      '#value' => t($settings['schedule_form']['abort']),
+      '#name' => 'abort',
+    );
+  }
+  return $form;
+}
+
+function cclinks_link_schedule_form_validate($form_id, $form_values) {
+  if (!$form_values['abort'] && $form_values['date'] != t('now') && (strtotime($form_values['date']) - cclinks_get_timezone()) <= time()) {
+    form_set_error('date', t('You have to choose a date in the future!'));
+  }
+}
+
+function cclinks_link_schedule_form_submit($form_id, $form_values) {
+  if ($form_values['abort']) {
+    //delete a schedule date and toggle back the link
+    $form_values['date'] = FALSE;
+    drupal_set_message(t('Scheduling has been aborted.'));
+  }
+  else {
+    drupal_set_message(t('Your changes have been saved.'));
+  }
+  //apply
+  cclinks_link_apply_schedule_date($form_values['node'], $form_values['event_name'], $form_values['date']);
+  return 'node/'. $form_values['node']->nid;
+}
+
+/*
+ * Applies the schedule date value, so if it is now the event is invoked immediately
+ */
+function cclinks_link_apply_schedule_date($node, $event_name, $date) {
+  if ($date) {
+    if ($date != t('now')) {
+      cclinks_set_date($node, $event_name, strtotime($date) - cclinks_get_timezone());
+      cclink_set_label($node, $event_name, TRUE);
+    }
+    else {
+      //immedate !
+      cclinks_delete_date($node, $event_name);
+      cclink_schedule_event($node, $event_name);
+    }
+  }
+  else {
+    //abort
+    cclinks_delete_date($node, $event_name);
+    cclink_set_label($node, $event_name, FALSE);
+  }
+}
+
+/*
+ * Gets the timezone offset of the current user to the server's time
+ */
+function cclinks_get_timezone() {
+  global $user;
+  if (variable_get('configurable_timezones', 1) && $user->uid && strlen($user->timezone)) {
+    return $user->timezone - variable_get('date_default_timezone', 0);
+  }
+  return 0;
+}
+
+
+/*
+ * Gets the configured date
+ */
+function cclinks_get_date($node, $event_name) {
+  return db_result(db_query("SELECT date FROM {cclink_schedules} WHERE vid = %d AND event = '%s'", $node->vid, $event_name));
+}
+/*
+ * Saves the configured date
+ */
+function cclinks_set_date($node, $event_name, $date) {
+  cclinks_delete_date($node, $event_name);
+  db_query("INSERT INTO {cclink_schedules} (vid, nid, event, date) VALUES(%d, %d, '%s', %d)", $node->vid, $node->nid, $event_name, $date);
+}
+
+/*
+ * Removes a configured date
+ */
+function cclinks_delete_date($node, $event_name) {
+  db_query("DELETE FROM {cclink_schedules} WHERE vid = %d AND event = '%s'", $node->vid, $event_name);
+}
+
+
+/**
+ * Implementation of hook_cron().
+ */
+function cclinks_cron() {
+  //do max 30 nodes once
+  $result = db_query_range('SELECT s.* FROM {cclink_schedules} s LEFT JOIN {node} n ON s.vid = n.vid WHERE s.date < %d', time(), 0, 30);
+
+  while ($row = db_fetch_object($result)) {
+    if ($node = node_load($row->nid, $row->vid)) {
+
+      cclink_schedule_event($node, $row->event);
+    }
+    //delete the date even if the node doesn't exist any more
+    cclinks_delete_date($row, $row->event);
+  }
+}
+
+/*
+ * Generates an event for a node and optionally adjusts the state, if necessary
+ */
+function cclink_schedule_event($node, $event_name, $reset_link = TRUE) {
+  //invoke the generated event
+  workflow_ng_invoke_event($event_name, $node);
+
+  if ($reset_link) {
+    cclink_set_label($node, $event_name, FALSE);
+  }
+}
+
+/*
+ * Sets the state of the given event, if necessary
+ */
+function cclink_set_label($node, $event_name, $clicked = FALSE) {
+  $cclinks = cclinks_get_events();
+  $settings = $cclinks[$event_name];
+
+  if ($settings['toggle_label']) {
+    $state = states_entity_get_machine_state($node, 'cce_'. $event_name);
+    if (!isset($state) && $clicked) {
+      states_machine_set_state($node, 'cce_'. $event_name, 'clicked');
+    }
+    else if ($state == 'clicked' && !$clicked) {
+      states_machine_set_state($node, 'cce_'. $event_name, NULL);
+    }
+  }
+}
+
+/*
+ * Toggles the state of the given event, if necessary
+ */
+function cclink_toggle_label($node, $event_name) {
+  $cclinks = cclinks_get_events();
+  $settings = $cclinks[$event_name];
+
+  if ($settings['toggle_label']) {
+    $state = states_entity_get_machine_state($node, 'cce_'. $event_name);
+    if (!isset($state)) {
+      states_machine_set_state($node, 'cce_'. $event_name, 'clicked');
+    }
+    else if ($state == 'clicked') {
+      states_machine_set_state($node, 'cce_'. $event_name, NULL);
+    }
+  }
+}

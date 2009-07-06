@@ -1,0 +1,148 @@
+<?php
+// $Id: i18npanels.module,v 0
+/**
+ * Callback function to supply a list of content types.
+ */
+function i18npanels_panels_content_types() {
+  $items['i18n_custom'] = array(
+    'callback' => 'i18npanels_panels_content_custom',
+    'admin' => 'i18npanels_panels_admin_custom',
+  );
+  return $items;
+}
+
+/**
+ * Output function for the 'custom' content type. Outputs a custom
+ * based on the module and delta supplied in the configuration.
+ */
+function i18npanels_panels_content_custom($conf) {
+  if (module_exists('i18n')) {
+    $lang = i18n_get_lang();
+    if ($conf[$lang]) {
+      $conf['title'] = $conf[$lang]['title'];
+      $conf['body'] = $conf[$lang]['body'];
+      $conf['format'] = $conf[$lang]['format'];
+    }
+  }
+  $title      = filter_xss_admin($conf['title']);
+  $css_id     = filter_xss_admin($conf['css_id']);
+  $css_class  = filter_xss_admin($conf['css_class']);
+  $body       = check_markup($conf['body'], $conf['format'], FALSE);
+  return theme('i18npanels_panels_content_custom', $title, $body, $css_id, $css_class);
+}
+
+function theme_i18npanels_panels_content_custom($title, $body, $css_id = NULL, $css_class = NULL) {
+  if ($css_id) {
+    $css_id = ' id="'. $css_id .'"';
+  }
+  if ($css_class) {
+    $css_class = ' '. $css_class;
+  }
+  $output = '<div class="panel-custom'. $css_class .'"'. $css_id .'>';
+  if ($title) {
+    $output .= '<h2 class="title">'.$title.'</h2>';
+  }
+  $output .= $body;
+  $output .= '</div>';
+  return $output;
+}
+
+/** 
+ * Callback to perform administrative functions on the content block
+ */
+function i18npanels_panels_admin_custom($op, &$arg, $parents = NULL) {
+  switch ($op) {
+    case 'list':
+      $conf = $arg;
+             
+        $current_lang = i18n_get_lang();
+        return '<strong>Custom</strong>: ' . filter_xss_admin($conf['meta_title']);
+        
+    case 'add button':      
+        $form['meta_title'] = array(
+          '#title' => t('Custom i18n content: Description of this content for the admin'),
+          '#type' => 'textfield',
+          '#maxlength' => 512,
+          '#weight'  => -10,
+        );
+      $form['submit'] = array(
+        '#type' => 'button',
+        '#value' => t('Add custom (i18n)'),
+      );
+      $form['#prefix'] = '<div class="container-inline">';
+      $form['#suffix'] = '</div>';
+      return $form;
+    case 'add':
+      if ($_POST['op'] != t('Add custom (i18n)')) {
+        return;
+      }
+      return $arg;
+    case 'edit':
+      $conf = &$arg;
+      $title_field = array(
+          '#type' => 'textfield',
+          '#default_value' => $conf['title'],
+          '#title' => t('Title'),
+          '#description' => t('Title'),
+          '#size' => 15,
+        );
+        
+       $body_field = array(
+          '#title' => t('Body'),
+          '#type' => 'textarea',
+          '#default_value' => $conf['body'],
+          '#rows' => 10,
+          '#cols' => 20,
+        );
+        
+          
+          $form['meta_title'] = array(
+          '#title' => t('Custom i18n content: Description of this content for the admin'),
+          '#type' => 'textfield',
+          '#maxlength' => 512,
+          '#weight'  => -10,
+          '#default_value' => $conf['meta_title']
+          );
+        
+          foreach (i18n_languages() as $iso => $lang) {
+            $form[$iso] = array(
+              '#type' => 'fieldset',
+              '#title' => $lang,
+              '#collapsible' => TRUE,
+              '#collapsed' => TRUE,
+            );
+            
+            
+            $form[$iso]['title'] = $title_field;
+            $form[$iso]['body'] = $body_field;          
+            $form[$iso]['title']['#default_value'] = $conf[$iso]['title'];
+            $form[$iso]['body']['#default_value'] = $conf[$iso]['body'];
+            $form[$iso]['format'] = filter_form($conf[$iso]['format'], NULL, array_merge($parents, array($iso, 'format')));
+          }
+      
+      $form['css_id'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $conf['css_id'],
+        '#title' => t('CSS ID'),
+        '#description' => t('CSS ID of this custom content.'),
+        '#weight' => 2,
+        '#size' => 15,
+      );
+      $form['css_class'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $conf['css_class'],
+        '#title' => t('CSS class'),
+        '#description' => t('CSS class of this custom content.'),
+        '#weight' => 2,
+        '#size' => 15,
+      );
+      return $form;
+    case 'validate':
+      $form = &$arg;
+      return;
+    case 'save':
+      
+      $form = &$arg;
+      return $form;
+  }
+}

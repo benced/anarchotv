@@ -1,0 +1,10 @@
+; $Id$
+name = SWFUpload
+description = "Expands the functionality of the upload module through implementation of SWFUpload."
+dependencies = upload
+
+; Information added by drupal.org packaging script on 2007-09-12
+version = "5.x-1.1"
+project = "swfupload"
+datestamp = "1189617607"
+

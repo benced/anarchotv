@@ -1,0 +1,18 @@
+<?php
+// $Id: swfupload.install,v 1.2 2007/09/12 09:06:53 robloach Exp $
+
+/**
+ * Install hook for the SWFUpload module to change the module's height
+ */
+function swfupload_install() {
+  db_query("UPDATE {system} SET weight='10' WHERE name='swfupload' AND type='module'");
+}
+
+/**
+ * Update hook for SWFUpload to set the weight of the module
+ */ 
+function swfupload_update_1() {
+  $items = array();
+  $items[] = update_sql("UPDATE {system} SET weight='10' WHERE name='swfupload' AND type='module'");
+  return $items;
+}

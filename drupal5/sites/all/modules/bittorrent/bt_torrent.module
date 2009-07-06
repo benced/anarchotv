@@ -1,0 +1,1102 @@
+<?php
+// $Id: bt_torrent.module,v 1.4.2.15 2008/02/04 18:51:49 bradfordcp Exp $
+
+/**
+ * @file
+ * Provides a "torrent" node type
+ * 
+ * Additional torrent node notes
+ */
+ require_once('./bt_common.inc');
+ 
+ /**
+  * Implementation of hook_node_info().
+  */
+function bt_torrent_node_info() {
+  return array(
+    'torrent' => array(
+      'name' => t('Torrent'),
+      'module' => 'bt_torrent',
+      'description' => t('Upload and share your favorite torrents'),
+      'has_title' => TRUE,
+      'title_label' => t('Torrent Name'),
+      'has_body' => TRUE,
+      'body_label' => t('Torrent Description'),
+      'min_word_count' => 1,
+      'locked' => TRUE
+    )
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ * 
+ * @param $may_cache
+ *   Whether or not the data returned may be cached
+ */
+function bt_torrent_menu($may_cache) {
+  $items = array();
+  
+  // Do not cache this menu item during the development of this module.
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'node/add/torrent',
+      'title' => t('Torrent'),
+      'access' => user_access('upload torrent'),
+    );
+    
+    $items[] = array(
+      'path' => 'admin/settings/bt_torrent',
+      'title' => t('BitTorrent Node Type Settings'),
+      'description' => t('Configure aspects of the BitTorrent node type'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('bt_torrent_admin_settings'),
+      'access' => user_access('administer site configuration'),
+    );
+  }
+  else{
+    $items[] = array(
+      'path' => 'torrent/download',
+      'title' => t('Retrieving torrent from the database'),
+      'callback' => 'bt_torrent_get_torrent',
+      'access' => user_access('download torrent'),
+      'type' => MENU_CALLBACK,
+    );
+  }
+  
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ *
+ * @return The permission associated with the bittorrent module.
+ *   The users may have an upload permission to create torrent node types and attach torrent files to them to be parsed.
+ *   The users may also have the edit own torrent permission to fix any errors in torrents they have created.
+ */
+function bt_torrent_perm() {
+  return array('download torrent', 'upload torrent', 'edit own torrent', 'web-seed');
+}
+
+/**
+ * Implementation of hook_access().
+ *
+ * @param $op
+ *   The operation being performed on the node
+ * @param $node
+ *   The node being used
+ * @return The user access for the node
+ */
+function bt_torrent_access($op, $node) {
+  global $user;
+  
+  if ($op == 'create') {
+    return (user_access('upload torrent'));
+  }
+  
+  if ($op == 'update' || $op == 'delete') {
+    return (user_access('edit own torrent') && ($user->uid == $node->uid));
+  }
+}
+
+/**
+ * Implementation of hook_form()
+ * 
+ * @param $node
+ *   The node to generate the form for the torrent
+ * @return The form to use
+ */
+function bt_torrent_form($node) {
+  $type = node_get_types('type', $node);
+  
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => $type->title_label,
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -5,
+  );
+  
+  $form['body_filter']['body'] = array(
+    '#type' => 'textarea',
+    '#title' => $type->body_label,
+    '#required' => TRUE,
+    '#default_value' => $node->body,
+    '#rows' => 7,
+  );
+  
+  $form['body_filter']['filter'] = filter_form($node->format);
+  
+  $form['bt_options'] = array(
+    '#title' => t('Torrent Options'),
+    '#type' => 'fieldset',
+    '#description' => t('Options for the Torrent node type.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#weight' => 1,
+  );
+  
+  if (module_exists('bt_tracker') && variable_get('bt_tracker_web_seeding', 0) != 0 && user_access('web-seed')) {
+    $form['bt_options']['web_seeding_path'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Web-seeding path (optional)'),
+      '#default_value' => '',
+      '#description' => t('The path to the file or directory containing the files, on the server relative to &quot;&lt;DRUPAL_ROOT&gt;/files/web-seeding/&quot;. Note: The files must be on the server <em>before</em> creating the node.'),
+      '#weight' => 1,
+    );
+  }
+  $form['bt_options']['upload_wrapper'] = array(
+    '#prefix' => '<div id="attach-wrapper">',
+    '#suffix' => '</div>',
+  );
+  
+  $form['bt_options']['upload_wrapper'] += module_invoke('_upload', 'form', $node);
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  
+  return $form;
+}
+
+/**
+ * Implementation of hook_validate().
+ * 
+ * @param $node
+ *   The node we are validating
+ */
+function bt_torrent_validate($node) {
+  if ($node->type == 'torrent') {
+    if (!is_array($node->files) && strcmp($node->web_seeding_path, '') == 0 && !isset($node->nid)) {
+      form_set_error('upload', t('A torrent file must be attached to the node <em>OR</em> a web-seeding path must be specified. Please attach a torrent or specify a path and try again.'));
+    }
+    elseif (is_array($node->files) && !(strcmp($node->web_seeding_path, '') == 0)) {
+      form_set_error('upload', t('Please do not attach torrents to nodes that are utilizing web-seeding'));
+    }
+    elseif (is_array($node->files) && (strcmp($node->web_seeding_path, ''))) {
+      if (!preg_match('/\.torrent$/i', $node->files['upload_0']['filename']) && is_valid_torrent(bdecode_torrent($node->files['upload_0']['filepath']))) {
+        form_set_error('upload', t('Please only upload .torrent files'));
+      }
+    }
+    elseif (!is_array($node->files) && !realpath(variable_get('bt_web_seed_dir', 'files/'. md5(drupal_get_private_key()) .'-web-seeding/') . $node->web_seeding_path) && !isset($node->nid)) {
+      form_set_error('web_seeding_path', t('Please enter a valid path.'));
+    }
+  }
+}
+
+/**
+ * Implementation of hook_form_alter();
+ * TODO: Take care of the instance where the file is listed as attached to the node
+ * 
+ * @param $form_id
+ *   The form's id
+ * @param $form
+ *   The form to alter
+ */
+function bt_torrent_form_alter($form_id, &$form) {
+  if ($form_id == 'torrent_node_form') {
+    unset($form['attachments']);
+  }
+  else if($form_id == 'upload_js') {
+    if (variable_get("upload_$node->type", TRUE) && isset($form['files']['upload_0']) && preg_match('/\.torrent/', $form['files']['upload_0']['filename']['#value'])) {
+      unset($form['new']);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ * hook_nodeapi is used instead of hook_insert because at the time that hook_insert has been called the upload module has not uploaded the torrent file to the server.
+ * When hook_nodeapi has been called the torrent has been uploaded to the server and we can pull the filepath out of the database.
+ *
+ * @param $node
+ *   The node we are working with
+ * @param $op
+ *   The operation being performed on the node
+ * @param $a3
+ * @param $a4
+ */
+function bt_torrent_nodeapi($node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->type == 'torrent') {
+    $base_path = variable_get('bt_web_seed_dir', 'files/'. md5(drupal_get_private_key()) .'-web-seeding/');
+    switch ($op) {
+      case 'insert':
+        if (strcmp($node->web_seeding_path, '') != 0) {
+          if (module_exists('bt_tracker')) {
+            global $base_url;
+            $announce_url = $base_url .'/announce.php';
+            $web_seed_url = $base_url .'/seed.php';
+            $root_url = $base_url .'/'. $base_path;
+          }
+          else {
+            $announce_url = '';
+            $seed_url = '';
+          }
+          
+          $torrent = array();
+          
+          if (is_dir(realpath($base_path . $node->web_seeding_path))) {
+            // Multi-file torrent
+            
+            // Set the time limit
+            set_time_limit(150);
+            
+            $torrent = array();
+            $files = _bt_crawl($base_path . $node->web_seeding_path);
+            $size = 0;
+            $pieces = '';
+            $torrent_files = array();
+            
+            // Determine the piece size
+            foreach ($files as $file) {
+              $size += filesize($file);
+            }
+            $target = round($size * 0.005);
+            for ($i = 0; pow(2, $i) < $target; $i++) {}
+            $piece_size = pow(2, ($i-1));
+            
+            $last_piece_size = 0;
+            $last_piece = '';
+            
+            foreach ($files as $file) {
+              $handle = fopen($file, 'rb');
+              
+              if ($last_piece_size != 0) {
+                $piece = fread($handle, $piece_size - $last_piece_size);
+                $pieces .= sha1($last_piece . $piece);
+              }
+              
+              $last_piece_size = 0;
+              $last_piece = '';
+              
+              // Create the hashes for the pieces
+              while ($piece = fread($handle, $piece_size)) {
+                if (strlen($piece) != $piece_size) {
+                  $last_piece_size = strlen($piece);
+                  $last_piece = $piece;
+                }
+                else {
+                  $pieces .= sha1($piece, TRUE);
+                }
+              }
+              fclose($handle);
+              
+              // TODO: Make this unset more dynamic
+              $path = explode('/', $file);
+              unset($path[0]);
+              unset($path[1]);
+              unset($path[2]);
+              
+              $torrent_files[] = array(
+                'length' => filesize($file),
+                'path' => $path,
+              );
+            }
+            
+            // Generate the torrent
+            $torrent['announce'] = variable_get('bt_override_announce_url', $announce_url);
+            $torrent['creation date'] = time();
+            $torrent['httpseeds'] = array($web_seed_url);
+            $torrent['url-list'] = array($root_url);
+            $torrent['info'] = array();
+            $torrent['info']['name'] = $node->web_seeding_path;
+            $torrent['info']['piece length'] = $piece_size;
+            $torrent['info']['pieces'] = $pieces;
+            $torrent['info']['files'] = $torrent_files;
+          }
+          else {
+            // Single file torrent
+                      
+            // Set the time limit
+            set_time_limit(150);
+            
+            $torrent = array();
+            $pieces = '';
+            
+            // Determine piece size
+            $size = filesize(realpath($base_path . $node->web_seeding_path));
+            $target = round($size * 0.005);
+            for ($i = 0; pow(2, $i) < $target; $i++) {}
+            $piece_size = pow(2, ($i-1));
+            
+            $handle = fopen(realpath($base_path . $node->web_seeding_path), 'rb');
+            
+            // Create the hashes for the pieces
+            while ($piece = fread($handle, $piece_size)) {
+              $pieces .= sha1($piece, TRUE);
+            }
+            fclose($handle);
+            
+            // Generate the torrent
+            $torrent['announce'] = variable_get('bt_override_announce_url', $announce_url);
+            $torrent['creation date'] = time();
+            $torrent['httpseeds'] = array($web_seed_url);
+            $torrent['url-list'] = array($root_url);
+            
+            $torrent['info'] = array();
+            $torrent['info']['name'] = basename($node->web_seeding_path);
+            $torrent['info']['length'] = filesize(realpath($base_path . $node->web_seeding_path));
+            $torrent['info']['piece length'] = $piece_size;
+            $torrent['info']['pieces'] = $pieces;
+          }
+        }
+        else {
+          $torrent = db_fetch_object(db_query("SELECT f.filepath FROM {files} f WHERE nid = %d", $node->nid));
+          $torrent = bdecode_torrent($torrent->filepath);
+        }
+          
+        if (variable_get('bt_override_announce', 1) == 0) {
+          $torrent['announce'] = variable_get('bt_override_announce_url', $torrent['announce']);
+        }
+        
+        db_query("INSERT INTO {bt_torrents}(nid, info_hash, use_announce, metadata, web_seed_path) VALUES (%d, '%s', '%s', %b, '%s')", $node->nid, info_hash($torrent), $torrent['announce'], bencode($torrent), realpath($base_path . $node->web_seeding_path));
+        
+        if (array_key_exists('files', $torrent['info'])) {
+          foreach ($torrent['info']['files'] as $torrent_file) {
+            db_query("INSERT INTO {bt_torrents_files}(nid, length, path, name) VALUES (%d, '%s', '%s', '%s')", $node->nid, $torrent_file['length'], serialize($torrent_file['path']), array_pop($torrent_file['path']));
+          }
+        }
+        else {
+          db_query("INSERT INTO {bt_torrents_files}(nid, length, path, name) VALUES (%d, '%s', '%s', '%s')", $node->nid, $torrent['info']['length'], serialize($torrent['info']['name']), $torrent['info']['name']);
+        }
+        
+        module_invoke('upload', 'delete', $node);
+        break;
+        
+      case 'update':
+        if (strcmp($node->web_seeding_path, '') != 0) {
+          if (module_exists('bt_tracker')) {
+            global $base_url;
+            $announce_url = $base_url .'/announce.php';
+            $web_seed_url = $base_url .'/seed.php';
+            $root_url = $base_url .'/'. $base_path;
+          }
+          else {
+            $announce_url = '';
+            $seed_url = '';
+          }
+          
+          $torrent = array();
+          
+          if (is_dir(realpath($base_path . $node->web_seeding_path))) {
+            // Multi-file torrent
+            
+            // Set the time limit
+            set_time_limit(150);
+            
+            $torrent = array();
+            $files = _bt_crawl($base_path . $node->web_seeding_path);
+            $size = 0;
+            $pieces = '';
+            $torrent_files = array();
+            
+            // Determine the piece size
+            foreach ($files as $file) {
+              $size += filesize($file);
+            }
+            $target = round($size * 0.005);
+            for ($i = 0; pow(2, $i) < $target; $i++) {}
+            $piece_size = pow(2, ($i-1));
+            
+            $last_piece_size = 0;
+            $last_piece = '';
+            
+            foreach ($files as $file) {
+              $handle = fopen($file, 'rb');
+              
+              if ($last_piece_size != 0) {
+                $piece = fread($handle, $piece_size - $last_piece_size);
+                $pieces .= sha1($last_piece . $piece);
+              }
+              
+              $last_piece_size = 0;
+              $last_piece = '';
+              
+              // Create the hashes for the pieces
+              while ($piece = fread($handle, $piece_size)) {
+                if (strlen($piece) != $piece_size) {
+                  $last_piece_size = strlen($piece);
+                  $last_piece = $piece;
+                }
+                else {
+                  $pieces .= sha1($piece, TRUE);
+                }
+              }
+              fclose($handle);
+              
+              // TODO: Make this unset more dynamic
+              $path = explode('/', $file);
+              unset($path[0]);
+              unset($path[1]);
+              unset($path[2]);
+              
+              $torrent_files[] = array(
+                'length' => filesize($file),
+                'path' => $path,
+              );
+            }
+            
+            // Generate the torrent
+            $torrent['announce'] = variable_get('bt_override_announce_url', $announce_url);
+            $torrent['creation date'] = time();
+            $torrent['httpseeds'] = array($web_seed_url);
+            $torrent['url-list'] = array($root_url);
+            $torrent['info'] = array();
+            $torrent['info']['name'] = $node->web_seeding_path;
+            $torrent['info']['piece length'] = $piece_size;
+            $torrent['info']['pieces'] = $pieces;
+            $torrent['info']['files'] = $torrent_files;
+          }
+          else {
+            // Single file torrent
+                      
+            // Set the time limit
+            set_time_limit(150);
+            
+            $torrent = array();
+            $pieces = '';
+            
+            // Determine piece size
+            $size = filesize(realpath($base_path . $node->web_seeding_path));
+            $target = round($size * 0.005);
+            for ($i = 0; pow(2, $i) < $target; $i++) {}
+            $piece_size = pow(2, ($i-1));
+            
+            $handle = fopen(realpath($base_path . $node->web_seeding_path), 'rb');
+            
+            // Create the hashes for the pieces
+            while ($piece = fread($handle, $piece_size)) {
+              $pieces .= sha1($piece, TRUE);
+            }
+            fclose($handle);
+            
+            // Generate the torrent
+            $torrent['announce'] = variable_get('bt_override_announce_url', $announce_url);
+            $torrent['creation date'] = time();
+            $torrent['httpseeds'] = array($web_seed_url);
+            $torrent['url-list'] = array($root_url);
+            
+            $torrent['info'] = array();
+            $torrent['info']['name'] = basename($node->web_seeding_path);
+            $torrent['info']['length'] = filesize(realpath($base_path . $node->web_seeding_path));
+            $torrent['info']['piece length'] = $piece_size;
+            $torrent['info']['pieces'] = $pieces;
+          }
+        }
+        else {
+          $torrent = db_fetch_object(db_query("SELECT f.filepath FROM {files} f WHERE nid = %d", $node->nid));
+          $torrent = bdecode_torrent($torrent->filepath);
+        }
+        
+        if (count($torrent) != 0) {
+          if (variable_get('bt_override_announce', 1) == 0) {
+            $torrent['announce'] = variable_get('bt_override_announce_url', $torrent['announce']);
+          }
+          
+          db_query("UPDATE {bt_torrents} SET info_hash = '%s', use_announce = '%s', metadata = %b WHERE nid = %d", info_hash($torrent), $torrent['announce'], bencode($torrent), $node->nid);
+          
+          db_query("DELETE FROM {bt_torrents_files} WHERE nid = %d", $node->nid);
+          
+          if (is_array($torrent['info']) && array_key_exists('files', $torrent['info'])) {
+            foreach ($torrent['info']['files'] as $torrent_file) {
+              $path = is_array($torrent_file['path']) ? $torrent_file['path'][count($torrent_file['path'])-1]: $torrent_file['path'];
+              db_query("INSERT INTO {bt_torrents_files}(nid, length, path, name) VALUES (%d, '%s', '%s', '%s')", $node->nid, $torrent_file['length'], serialize($torrent_file['path']), basename($path));
+            }
+          }
+          else {
+            db_query("INSERT INTO {bt_torrents_files}(nid, length, path, name) VALUES (%d, '%s', '%s', '%s')", $node->nid, $torrent['info']['length'], serialize($torrent['info']['name']), $torrent['info']['name']);
+          }
+          
+          module_invoke('upload', 'delete', $node);
+        }         
+        break;
+    }
+  }
+}
+
+/**
+ * Crawls through a specified directory creating a list of all files
+ *
+ * @param $path
+ *   The path to the initial directory to crawl through
+ * @return A list of all files and directories beneath the directory specified.
+ */
+function _bt_crawl($path) {
+  $tree = array();
+  
+  $handle = opendir($path);
+  
+  while ($dir = readdir($handle)) {
+    if ($dir !== FALSE && (strcmp($dir, '.') != 0 && strcmp($dir, '..') != 0)) {
+      if (is_dir($path . $dir)) {
+        $tree = array_merge($tree, _bt_crawl($path . $dir .'/'));
+      }
+      else {
+        $tree[] = $path .'/'. $dir;
+      }
+    }
+  }
+  
+  closedir($handle);
+  
+  return $tree;
+}
+
+/**
+ * Implementation of hook_delete().
+ *
+ * @param $node
+ *   The node that is being deleted
+ */
+function bt_torrent_delete($node) {
+  if ( $node->type == 'torrent' ) {
+    db_query("DELETE FROM {bt_torrents} WHERE nid = %d", $node->nid);
+    db_query("DELETE FROM {bt_torrents_files} WHERE nid = %d", $node->nid);
+  }
+}
+
+/**
+ * Admin page for setting variables for the node type
+ *
+ * @return The form object
+ */
+function bt_torrent_admin_settings() {
+  if (module_exists('bt_tracker')) {
+    global $base_url;
+    $default_url = $base_url .'/announce.php';
+  }
+  else {
+    $default_url = '';
+  }
+
+  $form['bt_override_announce'] = array(
+    '#type' => 'radios',
+    '#title' => t('Override Announce URL'),
+    '#options' => array(
+      t('Override'),
+      t('Leave Intact'),
+    ),      
+    '#default_value' => variable_get('bt_override_announce', 1),
+    '#description' => t('This determines whether or not the announce URL of the torrents being uploaded should be changed.'),
+  );
+  $form['bt_override_announce_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('New Announce URL'),
+    '#default_value' => variable_get('bt_override_announce_url', $default_url),
+    '#description' => t('This is the URL to use for the torrents being uploaded.')
+  );
+  
+  return system_settings_form($form);
+}
+
+/**
+ * Retrieves the torrent from the database and returns it to the user.
+ */
+function bt_torrent_get_torrent($nid = NULL, $passkey = NULL) {
+  if (!isset($nid) || !is_numeric($nid)) {
+    return t('Invalid torrent specified.');
+  }
+  else {
+  
+    $torrent = db_fetch_object(db_query("SELECT n.title, bt.metadata FROM {bt_torrents} bt INNER JOIN {node} n  ON n.nid = bt.nid WHERE bt.nid = %d", $nid));
+    
+    if ($torrent) {
+      // Add the passkey
+      if ($passkey) {
+        $bparsed = strip_excess(bdecode($torrent->metadata));
+        $bparsed['announce'] .= '?passkey='. urlencode($passkey);
+        $torrent->metadata = bencode($bparsed);
+      }
+      
+      // Update the snatches value
+      db_query("UPDATE {bt_torrents} SET snatches = snatches + 1 WHERE nid = %d", $nid);
+      
+      // Return the torrent
+      ob_clean();
+      drupal_set_header('Content-type: application/x-bittorrent');
+      drupal_set_header('Content-Disposition: attachment; filename="'. $torrent->title .'.torrent"');
+      print($torrent->metadata);
+      ob_flush();
+      exit();
+    }
+    else {
+      return t('There was an error retrieving the specified torrent.');
+    }
+  }
+}
+
+/**
+ * Implementation of hook_load().
+ */
+function bt_torrent_load($node) {
+  // Retrieve the basic torrent information
+  $base = db_fetch_object(db_query("SELECT info_hash, snatches, seeders, leechers, downloaded FROM {bt_torrents} WHERE nid = %d", $node->nid));
+  
+  // Retrieve the information about the files within the torrent
+  $base->files = array();
+  $result = db_query("SELECT length, path, name FROM {bt_torrents_files} WHERE nid = %d", $node->nid);
+  while ($row = db_fetch_array($result)) {
+    $base->files[] = $row;
+  }
+  
+  return $base;
+}
+
+/**
+ * Implementation of hook_view().
+ */
+function bt_torrent_view($node, $teaser = FALSE, $page = FALSE) {
+  if (!$teaser) {
+    // Use Drupal's default node view.
+    $node = node_prepare($node, $teaser);
+    
+    // Add the link to the torrent download.
+    global $user;
+
+    if (module_exists('bt_tracker') && $user->uid != 0 && variable_get('bt_override_announce', 1) == 0 && variable_get('bt_tracker_scope', 0) != 0) {
+      $passkey = module_invoke('bt_tracker', 'get_passkey');
+      
+      $link = theme('bt_torrent_link', 'torrent/download/'. $node->nid .'/'. urlencode($passkey));
+    }
+    else {
+      $link = theme('bt_torrent_link', 'torrent/download/'. $node->nid);
+    }
+    
+    $node->content['torrent_link'] = array(
+      '#value' => $link,
+      '#weight' => 1
+    );
+  }
+  if ($teaser) {
+    // Use Drupal's default node view.
+    $node = node_prepare($node, $teaser);
+  }
+  return $node;
+}
+
+/**
+ * Themes the link to download the torrent
+ * 
+ * @param $link
+ *   The link to download the torrent
+ * @return The output for the browser
+ */
+function theme_bt_torrent_link($link) {
+  $output = '<div class="torrent-link">'. l(t('Download the Torrent'), $link) .'</div><br />';
+  return $output;
+}
+
+/**
+ * Returns the tables used for views
+ *
+ * @return The structure for Views.
+ */
+function bt_torrent_views_tables() {
+  $tables = array();
+  $table = array(
+    'name' => 'bt_torrents',
+    'join' => array(
+      'left' => array(
+        'table' => 'node',
+        'field' => 'nid',
+      ),
+      'right' => array(
+        'field' => 'nid',
+      ),
+    ),
+    'fields' => array(
+      'snatches' => array(
+        'name' => t('BitTorrent: Snatches'),
+        'help' => t('The number of times the torrent has been downloaded.'),
+        'sortable' => TRUE,
+      ),
+      'seeders' => array(
+        'name' => t('BitTorrent: Seeders'),
+        'help' => t('The number of peers currently seeding the torrent.'),
+        'sortable' => TRUE,
+      ),
+      'leechers' => array(
+        'name' => t('BitTorrent: Leechers'),
+        'help' => t('The number of peers who have not completely downloaded the torrent.'),
+        'sortable' => TRUE,
+      ),
+    ),
+    'sorts' => array(
+      'snatches' => array(
+        'name' => 'BitTorrent: Snatches',
+        'help' => t('Sort by the number of users who have downloaded the .torrent file.'),
+      ),
+      'seeders' => array(
+        'name' => 'BitTorrent: Seeders',
+        'help' => t('Sort by the number of users who are seeding the file.'),
+      ),
+      'leechers' => array(
+        'name' => 'BitTorrent: Leechers',
+        'help' => t('Sort by the number of users who are downloading the file, but have not finished the download.'),
+      ),
+    ),
+  );
+  $tables['bt_torrents'] = $table;  
+  
+  $table = array(
+    'name' => 'bt_torrents_files',
+    'join' => array(
+      'left' => array(
+        'table' => 'node',
+        'field' => 'nid',
+      ),
+      'right' => array(
+        'field' => 'nid',
+      ),
+    ),
+    'fields' => array(
+      'name' => array(
+        'name' => t('BitTorrent: File Name'),
+        'help' => t('The names of the files within the torrent.'),
+        'sortable' => TRUE,
+      ),
+      'length' => array(
+        'name' => t('BitTorrent: File Length'),
+        'help' => t('The length of the files.'),
+        'sortable' => TRUE,
+      ),
+    ),
+  );
+  $tables['bt_torrents_files'] = $table;  
+  
+  return $tables;
+}
+
+/**
+ * Implementation of hook_views_default_views.
+ *
+ * @return the default views.
+ */
+function bt_torrent_views_default_views() {
+  $views = array();
+  
+  // BT_Files View
+  $view = new stdClass();
+  $view->name = 'BT_Files';
+  $view->description = 'Displays the files for a given torrent.';
+  $view->access = array();
+  $view->view_args_php = <<<EOT
+if (\$view->build_type == 'block' && arg(0) == 'node' && is_numeric(arg(1))) {
+  \$args[0] = arg(1);
+}
+return \$args;
+EOT;
+  $view->page = FALSE;
+  $view->page_title = '';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'node';
+  $view->url = '';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->block = TRUE;
+  $view->block_title = 'Torrent Files';
+  $view->block_header = '';
+  $view->block_header_format = '1';
+  $view->block_footer = '';
+  $view->block_footer_format = '1';
+  $view->block_empty = '';
+  $view->block_empty_format = '1';
+  $view->block_type = 'table';
+  $view->nodes_per_block = '100';
+  $view->block_more = FALSE;
+  $view->block_use_page_header = FALSE;
+  $view->block_use_page_footer = FALSE;
+  $view->block_use_page_empty = FALSE;
+  $view->sort = array();
+  $view->argument = array(
+    array(
+      'type' => 'nid',
+      'argdefault' => '1',
+      'title' => '',
+      'options' => '0',
+      'wildcard' => '',
+      'wildcard_substitution' => '',
+    ),
+  );
+  $view->field = array(
+    array(
+      'tablename' => 'bt_torrents_files',
+      'field' => 'name',
+      'label' => 'File Name',
+    ),
+    array(
+      'tablename' => 'bt_torrents_files',
+      'field' => 'length',
+      'label' => 'File Length',
+    ),
+  );
+  $view->filter = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'type',
+      'operator' => 'OR',
+      'options' => '',
+      'value' => array(
+        0 => 'torrent',
+      ),
+    ),
+  );
+  $view->exposed_filter = array(
+  );
+  $view->requires = array(bt_torrents_files, node);
+  $views[$view->name] = $view;
+  
+  // BT_Popular_Torrents view
+  $view = new stdClass();
+  $view->name = 'BT_Popular_Torrents';
+  $view->description = 'Top 5 torrents';
+  $view->access = array();
+  $view->view_args_php = '';
+  $view->page = FALSE;
+  $view->page_title = '';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'node';
+  $view->url = '';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->block = TRUE;
+  $view->block_title = 'Popular Torrents';
+  $view->block_header = '';
+  $view->block_header_format = '1';
+  $view->block_footer = '';
+  $view->block_footer_format = '1';
+  $view->block_empty = 'No torrents are currently available.';
+  $view->block_empty_format = '1';
+  $view->block_type = 'table';
+  $view->nodes_per_block = '5';
+  $view->block_more = FALSE;
+  $view->block_use_page_header = FALSE;
+  $view->block_use_page_footer = FALSE;
+  $view->block_use_page_empty = FALSE;
+  $view->sort = array(
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'snatches',
+      'sortorder' => 'DESC',
+      'options' => '',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'seeders',
+      'sortorder' => 'DESC',
+      'options' => '',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'leechers',
+      'sortorder' => 'DESC',
+      'options' => '',
+    ),
+  );
+  $view->argument = array(
+  );
+  $view->field = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'title',
+      'label' => '',
+      'handler' => 'views_handler_field_nodelink',
+      'options' => 'link',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'snatches',
+      'label' => 'Snatches: ',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'seeders',
+      'label' => 'Seeders:',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'leechers',
+      'label' => 'Leechers: ',
+    ),
+  );
+  $view->filter = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'type',
+      'operator' => 'OR',
+      'options' => '',
+      'value' => array(
+        0 => 'torrent',
+      ),
+    ),
+  );
+  $view->exposed_filter = array(
+  );
+  $view->requires = array(bt_torrents, node);
+  $views[$view->name] = $view;
+  
+  // BT_Torrent_Health
+  $view = new stdClass();
+  $view->name = 'BT_Torrent_Health';
+  $view->description = 'Displays the number of snatches, seeders, and leechers for a given torrent.';
+  $view->access = array(
+);
+  $view->view_args_php = <<<EOT
+if (\$view->build_type == 'block' && arg(0) == 'node' && is_numeric(arg(1))) {
+  \$args[0] = arg(1);
+}
+return \$args;
+EOT;
+  $view->page = FALSE;
+  $view->page_title = '';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'node';
+  $view->url = '';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->block = TRUE;
+  $view->block_title = 'Torrent Health';
+  $view->block_header = '';
+  $view->block_header_format = '1';
+  $view->block_footer = '';
+  $view->block_footer_format = '1';
+  $view->block_empty = '';
+  $view->block_empty_format = '1';
+  $view->block_type = 'table';
+  $view->nodes_per_block = '3';
+  $view->block_more = FALSE;
+  $view->block_use_page_header = FALSE;
+  $view->block_use_page_footer = FALSE;
+  $view->block_use_page_empty = FALSE;
+  $view->sort = array(
+  );
+  $view->argument = array(
+    array(
+      'type' => 'nid',
+      'argdefault' => '1',
+      'title' => '',
+      'options' => '0',
+      'wildcard' => '',
+      'wildcard_substitution' => '',
+    ),
+  );
+  $view->field = array(
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'snatches',
+      'label' => 'Snatches',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'seeders',
+      'label' => 'Seeders',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'leechers',
+      'label' => 'Leechers',
+    ),
+  );
+  $view->filter = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'type',
+      'operator' => 'OR',
+      'options' => '',
+      'value' => array(
+        0 => 'torrent',
+      ),
+    ),
+  );
+  $view->exposed_filter = array(
+  );
+  $view->requires = array(bt_torrents, node);
+  $views[$view->name] = $view;
+  
+  // BT_Torrent_Listing
+  $view = new stdClass();
+  $view->name = 'BT_Torrent_Listing';
+  $view->description = 'Lists torrents along witht he number of snatches, seeders, and leechers';
+  $view->access = array(
+);
+  $view->view_args_php = '';
+  $view->page = TRUE;
+  $view->page_title = 'Torrents';
+  $view->page_header = '';
+  $view->page_header_format = '1';
+  $view->page_footer = '';
+  $view->page_footer_format = '1';
+  $view->page_empty = '';
+  $view->page_empty_format = '1';
+  $view->page_type = 'table';
+  $view->url = 'bt/list';
+  $view->use_pager = TRUE;
+  $view->nodes_per_page = '10';
+  $view->sort = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'created',
+      'sortorder' => 'ASC',
+      'options' => 'normal',
+    ),
+  );
+  $view->argument = array(
+  );
+  $view->field = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'title',
+      'label' => 'Torrent Name',
+      'handler' => 'views_handler_field_nodelink',
+      'sortable' => '1',
+      'options' => 'link',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'snatches',
+      'label' => 'Snatches',
+      'sortable' => '1',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'seeders',
+      'label' => 'Seeders',
+      'sortable' => '1',
+    ),
+    array(
+      'tablename' => 'bt_torrents',
+      'field' => 'leechers',
+      'label' => 'Leechers',
+      'sortable' => '1',
+    ),
+  );
+  $view->filter = array(
+    array(
+      'tablename' => 'node',
+      'field' => 'type',
+      'operator' => 'OR',
+      'options' => '',
+      'value' => array(
+        0 => 'torrent',
+      ),
+    ),
+  );
+  $view->exposed_filter = array(
+  );
+  $view->requires = array(node, bt_torrents);
+  $views[$view->name] = $view;
+  
+  return $views;
+}

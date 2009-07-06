@@ -1,0 +1,13 @@
+INSTALL Notes -
+Before enabling the module please be sure to copy the following files to the Drupal root directory:
+  - announce.php
+  - scrape.php
+  - seed.php
+  - bt_common.inc
+
+Upload module needs to be configured to allow users to upload .torrent files. Visit admin/settings/uploads
+in your browser and add "torrent" to the "Default permitted file extensions" For the roles that have 
+permission to upload torrents.
+
+
+Note: To utilize the blocks that come pre-built you must have Views installed (http://www.drupal.org/project/views/).

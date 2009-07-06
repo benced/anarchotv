@@ -1,0 +1,10 @@
+; $Id: workflow_ng_ui.info,v 1.1.2.1 2007/08/24 13:43:30 fago Exp $
+name = Workflow-ng UI
+description = The workflow-ng administration interface.
+dependencies = workflow_ng
+package = Workflow-ng
+; Information added by drupal.org packaging script on 2008-05-14
+version = "5.x-2.1"
+project = "workflow_ng"
+datestamp = "1210778117"
+

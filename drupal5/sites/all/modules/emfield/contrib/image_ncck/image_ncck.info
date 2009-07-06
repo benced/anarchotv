@@ -1,0 +1,11 @@
+; $Id: image_ncck.info,v 1.1 2007/06/26 01:15:26 aaron Exp $
+name = Embedded Image Field
+description = Defines a field type for displaying images from third party providers, such as Flickr.
+dependencies = emfield
+package = CCK
+
+; Information added by drupal.org packaging script on 2008-05-11
+version = "5.x-1.2"
+project = "emfield"
+datestamp = "1210538707"
+

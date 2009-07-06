@@ -1,0 +1,100 @@
+<?php
+
+// $Id: flvmediaplayer_asset.module,v 1.1.2.14.2.1 2008/11/06 17:54:10 arthuregg Exp $
+
+function flvmediaplayer_asset_asset_formatter($op = 'info', $asset = null, $attr = array()) {  
+  switch($op){
+    case 'info':
+      $profiles = flvmediaplayer_profile_get_configs();
+      if ($profiles) {
+        foreach($profiles as $pid => $name) {
+        	if (variable_get('flvmediaplayer_asset_profile_'. $pid, false)) {
+  	        $formats[$name] = array(
+  	          'name' => $name . ' (flvmediaplayer)',
+  	          'types' => array('local' => array('jpg','gif','png','flv','xspf')),
+  	          'description' => t('Display asset inside the JW flash player'),
+  	          'module' => 'flvmediaplayer_asset',
+  	        );
+        	}
+        }
+      }
+      return $formats;
+   break;      
+            
+    case 'load':
+      if ($asset->type == 'file' && strpos($asset->file['filemime'], 'image/') === 0){
+        $profiles = flvmediaplayer_profile_get_configs();
+        if ($profiles) {
+          foreach($profiles as $id => $name){
+            $formats[] = $name;
+          }
+        }
+      }
+      return $formats;
+    break;
+        
+    case 'render':
+      // get the file information from the asset      
+      $params['file'] = $asset->url;
+      $attr['height'] ? $params['height'] = $attr['height'] : null;
+      $attr['width'] ? $params['width'] = $attr['width'] : null;
+      // load the javascript that we need to display in fitlered content 
+      $output = flvmediaplayer_asset_display_prep();
+      return $output . theme('flvmediaplayer_display', null, $attr['format'], $params);
+    break;
+  }
+   
+}
+
+/**
+ * this controls which profiles are available to to asset
+ */
+function flvmediaplayer_asset_asset_settings() {
+  $form[] = array('#value' => '<p>Select which FLV Media Player profiles should be available to use as asset formatters.</p>');
+  $profiles = flvmediaplayer_profile_get_configs();
+  if ($profiles) {
+    foreach ($profiles as $pid => $name){
+      $formats[$name] = array(
+        'name' => $name . ' (flvmediaplayer_asset)',
+        'types' => array('jpg','gif','png','flv','xspf'),
+        'description' => ''
+      );
+      $form['flvmediaplayer_asset_profile_'.$pid] = array(
+        '#type' => 'checkbox',
+        '#title' => $name,
+        '#default_value' => variable_get('flvmediaplayer_asset_profile_'.$pid, 1),
+      );      
+    }
+  }
+  else {
+    $form[] = array(
+      '#value' => t('Sorry, there are no profiles in the system. Please !create_some.', 
+        array('!create_some' => l(t('create some'), 'admin/settings/flvmediaplayer/profiles'))
+      )
+    );    
+  }
+  return system_settings_form($form);
+}
+
+
+/**
+ * helper function to build all the javascript needed to display the player
+ * @return string
+ */
+function flvmediaplayer_asset_display_prep() {
+  // we need to add the swfobject library to be sure that the player can load
+  $scripts[] = base_path() . drupal_get_path('module', 'swfobject_api') .'/swfobject.js';
+  
+  // make sure the form JS is added for the embed code
+  $scripts[] =  base_path() .'misc/collapse.js'; 
+  
+  // if jquery update is installed, we need to run that again
+  if (module_exists('jquery_update')) {
+    $scripts[] = base_path() . drupal_get_path('module', 'jquery_update') .'/collapse-fix.js';
+  }
+  
+  foreach($scripts as $script) {
+    $output[] = '<script type="text/javascript" src="'. $script .'"></script>';
+  }
+  return implode("\n", $output);
+}

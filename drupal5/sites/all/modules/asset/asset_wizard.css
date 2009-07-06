@@ -1,0 +1,103 @@
+@CHARSET "UTF-8";
+
+body{
+  margin: 0 !important;
+}
+#asset-popup{
+  margin: 0 auto;
+}
+#asset-popup h1{
+  padding: .5em 1em 0;
+  border-bottom: solid 1px;
+}
+#asset-popup-main{
+  padding: 0 1em;
+}
+#asset-popup-footer{
+  border-top: solid 1px;
+  padding: 0 1em;
+}
+.asset-tree-widget .form-item{
+  margin: 0;
+}
+.asset-tree-widget ul{
+  margin: 0;
+  border-top: solid 2px #888;
+  border-left: solid 2px #888;
+  background-color: #fff;
+  line-height: 1.25em;
+  height: 200px;
+  overflow-y: scroll;
+  width: 150px;
+  float: left;
+}
+.asset-tree-widget li{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: transparent;
+}
+.asset-tree-widget select{
+  line-height: 1.25em;
+  height: 200px;
+  width: 200px;
+  float: left;
+}
+.asset-tree-widget .asset-preview{
+  width: 200px;
+  float: left;
+  height: 200px;
+  background-color: #fff;
+  border-top: solid 2px #888;
+  border-left: solid 2px #888;
+  text-align: center;
+  overflow: auto;
+}
+  
+#asset-popup .container-inline .form-submit{
+  margin: 0;
+}
+#asset-popup .container-inline .form-item{
+  margin: 0;
+}
+.asset-selected-preview{
+  float: right;
+  margin-left: 20px;
+}
+
+.item-list ul li.file,
+.item-list ul li.folder{
+  list-style-type: none;
+  list-style-image: none;
+  padding-left: 25px;
+}
+
+.item-list ul li.file{
+  background: url(i/doc-plain-white.png) no-repeat 0 0;
+}
+
+.item-list ul li.folder{
+  background: url(i/folder-closed-white.png) no-repeat 0 0;
+}
+
+.form-radios .roles{
+  margin-left: 2em;
+}
+
+.messages{
+  border: dashed 1px #333;
+  background: #f0f0f0f;
+  background: Highlight;
+  color : #333;
+  color: HighlightText;
+  padding: 10px 100px 10px 20px;
+  margin: 10px 0;
+}
+.messages a.okay{
+  background: ButtonFace;
+  border: outset 2px ButtonFace;
+  color: ButtonText;
+  float: right;
+  padding: 3px 5px;
+  cursor: pointer;
+}

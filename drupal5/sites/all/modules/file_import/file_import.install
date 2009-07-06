@@ -1,0 +1,9 @@
+<?php
+// $Id: file_import.install,v 1.1 2008/02/15 01:02:27 neochief Exp $
+
+function file_import_uninstall() {
+  variable_del('file_import_path');
+  variable_del('file_import_output_path');
+  variable_del('only_with_uploads');
+  variable_del('file_import_tab');
+}

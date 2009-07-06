@@ -1,0 +1,10 @@
+/* $Id: changelog.txt,v 1.3 2008/02/17 19:11:00 aaron Exp $ */
+
+2008-02-17
+add provider views handlers
+
+2008-01-06
+began development for emaudio
+
+2008-01-30
+Added Odeo and Podcast Alley Support

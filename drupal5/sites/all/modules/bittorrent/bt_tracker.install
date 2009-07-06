@@ -1,0 +1,60 @@
+<?php
+// $Id: bt_tracker.install,v 1.4.2.8 2007/09/22 05:10:21 bradfordcp Exp $
+
+/**
+ * Implementation of hook_install
+ */
+function bt_tracker_install() {
+  drupal_set_message(t('Beginning installation of BitTorrent Tracker module.'));
+  
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {bt_tracker_users} (
+        uid int DEFAULT 0 UNIQUE NOT NULL,
+        passkey tinyblob NOT NULL,
+        passkey_status tinyint(2) unsigned NOT NULL default '0',
+        bytes_uploaded int DEFAULT 0 NOT NULL,
+        bytes_downloaded int DEFAULT 0 NOT NULL,
+        PRIMARY KEY(uid))");
+      db_query("CREATE TABLE {bt_tracker_active_users} (
+        uid int DEFAULT 0 NOT NULL,
+        peer_id tinyblob NOT NULL, 
+        peer_key varchar(20) DEFAULT NULL, 
+        ip varchar(15) NOT NULL,
+        port int DEFAULT 0, 
+        info_hash tinyblob NOT NULL, 
+        bytes_uploaded bigint DEFAULT 0 NOT NULL, 
+        bytes_downloaded bigint DEFAULT 0 NOT NULL, 
+        bytes_left bigint DEFAULT 0 NOT NULL, 
+        last_announce bigint DEFAULT 0 NOT NULL)");
+      db_query("ALTER TABLE {bt_torrents}
+        ADD downloaded INT UNSIGNED NOT NULL DEFAULT '0'");
+        
+      $success = TRUE;
+      break;
+      
+    default:
+      drupal_set_message(t('Unsupported database.'));
+      $success = FALSE;
+  }
+  
+  if ($success) {
+    drupal_set_message(t('The module installed tables successfully.'));
+  }
+  else {
+    drupal_set_message(t('The installation of the BitTorrent Tracker module was unsuccessful.'), 'error');
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function bt_tracker_uninstall() {
+  db_query('DROP TABLE {bt_tracker_users}, {bt_tracker_active_users}');
+    
+  if (db_table_exists("bt_torrents")) {
+        db_query("ALTER TABLE {bt_torrents} DROP downloaded");
+    }
+  drupal_set_message('Uninstalled BitTorrent Tracker Module.');
+}

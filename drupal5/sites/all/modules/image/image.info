@@ -1,0 +1,10 @@
+; $Id: image.info,v 1.4 2007/07/18 17:04:02 drewish Exp $
+name = Image
+description = Allows uploading, resizing and viewing of images.
+package = Image
+
+; Information added by drupal.org packaging script on 2008-08-17
+version = "5.x-2.0-alpha3"
+project = "image"
+datestamp = "1218964512"
+

@@ -1,0 +1,50 @@
+<?php
+// $Id $
+
+/**
+ * Implementation of hook_install().
+ */
+function encl_remote_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {encl_remotes} (
+			  `rid` int(11) unsigned NOT NULL auto_increment,
+			  `nid` int(11) unsigned NOT NULL,
+			  `url` varchar(255) NOT NULL,
+			  `mime_type` varchar(32) NOT NULL,
+			  `size` bigint(20) unsigned default NULL,
+			  `link_text` varchar(255) default NULL,
+			  PRIMARY KEY  (`rid`, `nid`)
+      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {encl_remotes} (
+        rid serial,
+        nid int NOT NULL default '0',
+        url varchar(255) NOT NULL,
+        mime_type varchar(20) NOT NULL,
+        size bigint unsigned default NULL,
+				link_text varchar(255) default NULL,
+        PRIMARY KEY (rid, nid)
+      )");
+      db_query("CREATE INDEX {encl_remote_item}_fid_idx ON {encl_remote_item} (fid)");
+      break;
+  }
+
+  $encl_remote_mime_type_extensions= array(
+  	'mp3' => 'audio/mpeg',
+  	'wmv' => 'video/x-ms-wmv',
+  	'mov' => 'video/quicktime',
+  	'mpg' => 'video/mpeg');
+  	
+  variable_set('encl_remote_mime_type_extensions', $encl_remote_mime_type_extensions);
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function encl_remote_uninstall() {
+  db_query('DROP TABLE {encl_remotes}');
+  variable_del('encl_remote_mime_type_extensions');
+}

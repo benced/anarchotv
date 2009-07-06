@@ -1,0 +1,192 @@
+<?php
+
+/**
+ * Return an array of files attached to a node suitable for use as thumbnail images.
+ *
+ * @param $node
+ *   A node object.
+ */
+function xspf_playlist_thumb_get_attached_files($node) {
+  if (isset($node->files)) {
+    $thumbs = array();
+    foreach($node->files as $file) {
+      $info = pathinfo($file->filename);
+      if (in_array($info['extension'], array('jpeg', 'jpg', 'gif', 'png'))) {
+        $thumbs[] = $file->filepath;
+      }
+    }
+    if ($thumbs) {return $thumbs;}
+  }
+}
+
+/* ******************************************************* */
+/* xspf_playlist xspf hooks */
+/* ******************************************************* */
+
+/**
+ * implements hook_xspf_playlist_thumbnail
+ * build the default options for the admin screen
+ * @param $op is the operation happening
+ * @param $node is a node object
+ * @param $config is which config to run
+ */
+function xspf_playlist_thumb_xspf_playlist_thumbnail ($op, $node, $config = null) {
+  switch($op){
+    case 'define':
+      $items = array(
+        'xspf_playlist_thumb--1' => t('none'),
+        'xspf_playlist_thumb--2' => t('XSPF: Default thumbnail'),
+        'xspf_playlist_thumb--3' => t('XSPF: Attached files'),
+      );
+      return $items;
+    break;
+
+    case 'config':
+      // return a configuration array
+      $form['xspf_playlist_thumb_'. $node->type] = array(
+        '#type' => 'textfield',
+        '#title' => t('Path to default thumbnail'),
+        '#default_value' => variable_get('xspf_playlist_thumb_'. $node->type, null),
+        '#description' => t('Enter a path to a thumbnail you wish to use as a default'),
+        '#prefix' => '<div id="xspf_playlist--2_config" class="xspf_playlist_config_thumb">',
+        '#suffix' => '</div>',
+      );
+      return $form;
+    break;
+
+    case 'return':
+      switch ($config){
+        case 1:
+          return;
+        break;
+        case 2:
+          // return default thumbnail
+          return variable_get('xspf_playlist_thumb_'. $node->type, null);
+        break;
+
+        case 3:
+          return xspf_playlist_thumb_get_attached_files($node);
+        break;
+
+      }
+    break;
+  }
+}
+
+
+/**
+ * this wraps the theme image function so we can pass urls and paths
+ */
+function theme_xspf_playlist_thumb_image($path, $alt = '', $title = '', $attributes = '', $getsize = false) {
+  if (strstr($path, 'http://')) {
+    $attributes = drupal_attributes($attributes);
+    return '<img src="'. check_url($path) .'" alt="'. check_plain($alt) .'" title="'. check_plain($title) .'" '. $attributes .' />';
+  }
+  else {
+    return theme('image', $path, $alt, $title, $attributes, $getsize);
+  }
+}
+
+/**
+ * this builds the images that can be used for picking
+ * @param $thumbs is an array of thumbnails
+ * @param int $xid is the playlist id that this is related to
+ * @return html
+ */
+function theme_xspf_playlist_thumbnailer_picker($thumbs, $xid) {
+  $output = array();
+
+  // Add the JS and CSS.
+  $path = drupal_get_path('module', 'xspf_playlist_thumb');
+  drupal_add_js($path . '/xspf_playlist_thumb.js');
+  drupal_add_css($path . '/xspf_playlist_thumb.css');
+
+  $output[] = '<div class="xspf_playlist-picker" id="xspf_'. $xid .'">';
+  foreach ($thumbs as $id => $path) {
+    $output[] = '<div class="xspf_playlist-thumb" id="xspf_thumb_'. $xid .'_'. $id .'">'. theme('xspf_playlist_thumb_image', $path) ."</div>\n";
+  }
+  $output[] = '<div class="xspf_playlist-selected"></div>';
+  $output[] = '</div>';
+  return implode($output);
+}
+
+/**
+ * Save data for a given thumbnail item.
+ *
+ * @param array $item
+ *   An item to be saved having the following keys:
+ *   - string type: The type of object, e.g., 'node'.
+ *   - id: The ID of the object, e.g., a node's nid value.
+ *   - vid: A version ID if the object takes one, e.g., a node's vid value.
+ *   - item_path: The path to a file representing the playlist item.
+ *   - thumbnail_path: The path to a file representing the playlist
+ *     item's thumbnail image.
+ */
+function xspf_playlist_thumb_save($item) {
+  // Use a VID as the primary key if present, otherwise an ID.
+  $key = isset($item['vid']) && $item['vid'] ? 'vid' : 'id';
+  // Test for an existing record.
+  $result = db_query("SELECT * FROM {xspf_playlist_thumb} WHERE $key = %d AND type = '%s'", $item[$key], $item['type']);
+  // If found, update.
+  if (db_num_rows($result)) {
+    db_query("UPDATE {xspf_playlist_thumb} SET item_path = '%s', thumbnail_path = '%s' WHERE $key = %d AND type = '%s'", $item['item_path'], $item['thumbnail_path'], $item[$key], $item['type']);
+  }
+  // Otherwise, create a new record.
+  else {
+    db_query("INSERT INTO {xspf_playlist_thumb} (type, id, vid, item_path, thumbnail_path) VALUES ('%s', %d, %d, '%s', '%s')", $item['type'], $item['id'], $item['vid'], $item['item_path'], $item['thumbnail_path']);
+  }
+}
+
+/**
+ * Delete existing thumbnail data for an item.
+ *
+ * @param string $type
+ *   The type of object, e.g., 'node'.
+ * @param int $id
+ *   The ID of the object, e.g., a node's nid value.
+ * @param int $vid
+ *   A version ID if the object takes one, e.g., a node's vid value.
+ */
+function xspf_playlist_thumb_delete($type, $id = NULL, $vid = NULL) {
+  if ($vid) {
+    db_query("DELETE FROM {xspf_playlist_thumb} WHERE vid = %d AND type = '%s'", $vid, $type);
+  }
+  elseif ($id) {
+    db_query("DELETE FROM {xspf_playlist_thumb} WHERE id = %d AND type = '%s'", $id, $type);
+  }
+}
+
+/**
+ * Retrieve data for a given thumbnail item.
+ *
+ * @param array $item
+ *   An item to be saved having the following keys:
+ *   - type: The type of object, e.g., 'node'.
+ *   - id: The ID of the object, e.g., a node's nid value.
+ *   - vid: A version ID if the object takes one, e.g., a node's vid value.
+ *   - item_path: The path to a file representing the playlist item.
+ *   - thumbnail_path: The path to a file representing the playlist
+ *     item's thumbnail image.
+ */
+function xspf_playlist_thumb_load($item) {
+
+  // At a minimum, test for a given type.
+  $conditions = array("type = '%s'");
+  $parameters = array($item['type']);
+  
+  // For other properties, test for them if present in the incoming item.
+  $fields = array(
+    'id' => '%d',
+    'vid' => '%d',
+    'item_path' => "'%s'",
+    'thumbnail_path' => "'%s'",
+  );
+  foreach ($fields as $key => $placeholder) {
+    if (isset($item[$key])) {
+      $conditions[] = 'id = ' . $placeholder;
+      $parameters[] = $item[$key];
+    }
+  }
+  return db_fetch_array(db_query('SELECT * FROM {xspf_playlist_thumb} WHERE ' . implode(' AND ', $conditions), $parameters));
+}
+
